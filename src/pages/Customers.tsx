@@ -1,0 +1,464 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { 
+    Users, 
+    Search, 
+    Loader2,
+    Pencil,
+    ToggleLeft,
+    ToggleRight,
+    X,
+    AlertCircle,
+    Check
+} from 'lucide-react';
+import { useAppStore } from '@/store/useAppStore';
+import { useCustomerStore } from '@/store/useCustomerStore';
+import type { Customer } from '@/types/api';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { toast } from 'sonner';
+import { Skeleton } from "@/components/ui/skeleton"
+
+const formatRtn = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 16);
+    if (digits.length > 8) return digits.slice(0, 4) + '-' + digits.slice(4, 8) + '-' + digits.slice(8);
+    if (digits.length > 4) return digits.slice(0, 4) + '-' + digits.slice(4);
+    return digits;
+};
+
+const Customers: React.FC = () => {
+    const { getCustomers, updateCustomer, toggleCustomerStatus } = useCustomerStore();
+    const { selectedStore } = useAppStore();
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [totalCustomers, setTotalCustomers] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+
+    const [filters, setFilters] = useState({
+        search: '',
+        billingType: 'all',
+        page: 1
+    });
+
+    const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+    const [editForm, setEditForm] = useState({ customerName: '', rtn: '' });
+    const [savingCustomer, setSavingCustomer] = useState(false);
+
+    const [togglingCustomer, setTogglingCustomer] = useState<string | null>(null);
+
+    const fetchCustomers = useCallback(async (isManual = false, overrideFilters?: any) => {
+        if (isManual) setIsRefreshing(true);
+        else setLoading(true);
+
+        try {
+            setHasSearched(true);
+            const apiFilters: any = { ...filters, ...overrideFilters };
+            if (apiFilters.billingType === 'all') delete apiFilters.billingType;
+            
+            const res = await getCustomers(apiFilters);
+            if (res && res.data) {
+                setCustomers(res.data);
+                setTotalCustomers(res.total || 0);
+            } else {
+                setCustomers([]);
+                setTotalCustomers(0);
+            }
+        } catch (error) {
+            toast.error('Error al cargar clientes');
+        } finally {
+            setLoading(false);
+            setIsRefreshing(false);
+        }
+    }, [getCustomers, filters]);
+
+    useEffect(() => {
+        if (selectedStore) {
+            fetchCustomers();
+        }
+    }, [selectedStore]);
+
+    const handleFilterChange = (key: string, value: string) => {
+        setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+    };
+
+    const handleEditClick = (customer: Customer) => {
+        setEditingCustomer(customer);
+        setEditForm({
+            customerName: customer.customerName,
+            rtn: formatRtn(customer.rtn || '')
+        });
+    };
+
+    const handleEditSave = async () => {
+        if (!editingCustomer) return;
+        setSavingCustomer(true);
+
+        try {
+            const res = await updateCustomer(editingCustomer.customerNo, {
+                customerName: editForm.customerName,
+                rtn: editForm.rtn.replace(/\D/g, '')
+            });
+
+            if (res.success) {
+                toast.success('Cliente actualizado correctamente');
+                setEditingCustomer(null);
+                fetchCustomers(true);
+            } else {
+                toast.error(res.error || 'Error al actualizar cliente');
+            }
+        } catch (error) {
+            toast.error('Error al actualizar cliente');
+        } finally {
+            setSavingCustomer(false);
+        }
+    };
+
+    const handleToggleStatus = async (customer: Customer) => {
+        setTogglingCustomer(customer.customerNo);
+        try {
+            const res = await toggleCustomerStatus(customer.customerNo);
+            if (res.success) {
+                toast.success(`Cliente ${res.blocked ? 'deshabilitado' : 'habilitado'} correctamente`);
+                fetchCustomers(true);
+            } else {
+                toast.error(res.error || 'Error al cambiar estado');
+            }
+        } catch (error) {
+            toast.error('Error al cambiar estado del cliente');
+        } finally {
+            setTogglingCustomer(null);
+        }
+    };
+
+    const changePage = (newPage: number) => {
+        if (newPage < 1) return;
+        setFilters(prev => ({ ...prev, page: newPage }));
+        fetchCustomers(true, { page: newPage });
+    };
+
+    const billingTypes = [
+        { id: 'all', label: 'Todos' },
+        { id: '1', label: 'Contado' },
+        { id: '0', label: 'Credito' },
+    ];
+
+    if (!selectedStore || selectedStore.code === 'GLOBAL' || selectedStore.code === '000') {
+        return (
+            <div className="flex items-center justify-center h-[60vh]">
+                <Card className="w-[400px]">
+                    <CardHeader>
+                        <CardTitle className="text-center">Seleccione una tienda</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center text-muted-foreground">
+                        Debe seleccionar una sucursal en el menu superior para ver los clientes.
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col h-full space-y-4">
+            <div className="flex flex-col md:flex-row justify-start items-start md:items-center gap-12 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 rounded-xl border border-border/50 sticky top-0 z-10 shadow-sm">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        <Users className="h-6 w-6 text-primary" />
+                        Modulo de Clientes
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                        Gestion de clientes de {selectedStore.name}.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => fetchCustomers(true)}
+                        disabled={loading || isRefreshing}
+                        className="gap-2"
+                    >
+                        {isRefreshing || loading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Search className="h-4 w-4" />
+                        )}
+                        {isRefreshing || loading ? 'Buscando...' : 'Buscar'}
+                    </Button>
+                </div>
+            </div>
+
+            <Card className="border-border/50 shadow-sm bg-muted/20">
+                <CardContent className="p-3 border-b">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase text-muted-foreground ml-1">Buscar</label>
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Nombre, codigo o RTN..." 
+                                    className="pl-8 h-9 text-xs"
+                                    value={filters.search}
+                                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && fetchCustomers(true)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase text-muted-foreground ml-1">Tipo de Cliente</label>
+                            <Select 
+                                value={filters.billingType} 
+                                onValueChange={(v) => handleFilterChange('billingType', v)}
+                            >
+                                <SelectTrigger className="h-9 text-xs bg-background">
+                                    <SelectValue placeholder="Tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {billingTypes.map(t => (
+                                        <SelectItem key={t.id} value={t.id} className="text-xs">
+                                            {t.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-muted/30 p-2 rounded-lg border">
+                            <span className="text-xs text-muted-foreground">
+                                Total: <span className="font-bold text-foreground">{totalCustomers.toLocaleString('en-US')}</span> clientes
+                            </span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="flex-1 overflow-auto pr-2 custom-scrollbar min-h-0">
+                {!hasSearched ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-muted/10 rounded-2xl border-2 border-dashed border-muted">
+                        <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                        <h3 className="text-lg font-medium">Busqueda de Clientes</h3>
+                        <p className="text-muted-foreground text-center max-w-xs mb-4">
+                            Utiliza los filtros de arriba y haz clic en "Buscar" para consultar los clientes.
+                        </p>
+                        <Button onClick={() => fetchCustomers(true)} variant="outline" className="gap-2">
+                            <Search className="h-4 w-4" />
+                            Buscar Clientes
+                        </Button>
+                    </div>
+                ) : loading && customers.length === 0 ? (
+                    <div className="space-y-3 py-10">
+                        <Skeleton className="h-8 w-64" />
+                        <Skeleton className="h-10 w-full rounded-lg" />
+                        <div className="space-y-2">
+                            {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+                        </div>
+                    </div>
+                ) : customers.length > 0 ? (
+                    <div className="flex flex-col pb-4">
+                        <div className="rounded-lg border bg-card">
+                            <div className="grid grid-cols-12 gap-2 p-3 bg-muted/40 border-b text-[11px] font-black uppercase text-muted-foreground tracking-tight">
+                                <div className="col-span-2">Codigo</div>
+                                <div className="col-span-4">Nombre Completo</div>
+                                <div className="col-span-2">RTN</div>
+                                <div className="col-span-2 text-center">Tipo Cuenta</div>
+                                <div className="col-span-1 text-center">Estado</div>
+                                <div className="col-span-1 text-center">Acciones</div>
+                            </div>
+                            <div className="divide-y">
+                                {customers.map((customer) => (
+                                    <div key={customer.customerNo} className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-muted/10 transition-colors">
+                                        <div className="col-span-2 font-mono text-xs font-semibold text-primary">
+                                            {customer.customerNo}
+                                        </div>
+                                        <div className="col-span-4 text-sm font-medium truncate" title={customer.customerName}>
+                                            {customer.customerName}
+                                        </div>
+                                        <div className="col-span-2 font-mono text-sm text-muted-foreground tabular-nums">
+                                            {customer.rtn ? formatRtn(customer.rtn) : '-'}
+                                        </div>
+                                        <div className="col-span-2 flex justify-center">
+                                            <Badge 
+                                                variant={customer.billingType === 0 ? "default" : "secondary"}
+                                                className={`text-[10px] uppercase font-bold px-2 py-0.5 ${
+                                                    customer.billingType === 0 
+                                                        ? 'bg-primary text-primary-foreground shadow-sm' 
+                                                        : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                                }`}
+                                            >
+                                                {customer.billingTypeLabel}
+                                            </Badge>
+                                        </div>
+                                        <div className="col-span-1 flex justify-center">
+                                            <Badge 
+                                                variant="outline"
+                                                className={`text-[9px] uppercase font-black px-1.5 py-0 ${
+                                                    customer.blocked 
+                                                        ? 'text-red-600 border-red-200 bg-red-50' 
+                                                        : 'text-emerald-600 border-emerald-200 bg-emerald-50'
+                                                }`}
+                                            >
+                                                {customer.blocked ? 'Bloqueado' : 'Activo'}
+                                            </Badge>
+                                        </div>
+                                        <div className="col-span-1 flex items-center justify-center gap-1">
+                                            <div className="flex bg-muted/50 rounded-md p-0.5 border">
+                                                {customer.billingType === 1 ? (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEditClick(customer)}
+                                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary transition-colors"
+                                                        title="Editar datos del cliente"
+                                                    >
+                                                        <Pencil className="h-3 w-3" />
+                                                    </Button>
+                                                ) : (
+                                                    <div className="h-6 w-6 flex items-center justify-center" title="Clientes de crédito no son editables">
+                                                        <AlertCircle className="h-3 w-3 text-muted-foreground/30" />
+                                                    </div>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleToggleStatus(customer)}
+                                                    disabled={togglingCustomer === customer.customerNo}
+                                                    className={`h-6 w-6 p-0 ${customer.blocked ? 'text-red-500 hover:text-red-600' : 'text-emerald-500 hover:text-emerald-600'} transition-all`}
+                                                    title={customer.blocked ? 'Habilitar este cliente' : 'Bloquear este cliente'}
+                                                >
+                                                    {togglingCustomer === customer.customerNo ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                    ) : customer.blocked ? (
+                                                        <ToggleLeft className="h-4 w-4" />
+                                                    ) : (
+                                                        <ToggleRight className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-center mt-4 gap-2 items-center">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => changePage(filters.page - 1)}
+                                disabled={filters.page === 1 || loading}
+                            >
+                                Anterior
+                            </Button>
+                            <span className="text-xs text-muted-foreground font-mono px-3">
+                                Pagina {filters.page}
+                            </span>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => changePage(filters.page + 1)}
+                                disabled={customers.length < 50 || loading}
+                            >
+                                Siguiente
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 bg-muted/10 rounded-2xl border-2 border-dashed border-muted">
+                        <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                        <h3 className="text-lg font-medium">No se encontraron clientes</h3>
+                        <p className="text-muted-foreground text-center max-w-xs">
+                            No hay registros que coincidan con los filtros aplicados.
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {editingCustomer && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <Card className="w-[450px] max-h-[90vh] overflow-auto">
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg">Editar Cliente</CardTitle>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => setEditingCustomer(null)}
+                                    className="h-7 w-7 p-0"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span className="font-mono text-base">Cuenta: {editingCustomer.customerNo}</span>
+                                <Badge 
+                                    variant={editingCustomer.billingType === 0 ? "default" : "secondary"}
+                                    className={`text-[10px] uppercase font-bold ${
+                                        editingCustomer.billingType === 0 
+                                            ? 'bg-primary text-primary-foreground' 
+                                            : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                    }`}
+                                >
+                                    {editingCustomer.billingTypeLabel}
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-muted-foreground">Nombre</label>
+                                <Input 
+                                    value={editForm.customerName}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, customerName: e.target.value }))}
+                                    placeholder="Nombre del cliente"
+                                    className="text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-muted-foreground">RTN</label>
+                                <Input 
+                                    value={editForm.rtn}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, rtn: formatRtn(e.target.value) }))}
+                                    placeholder="0501-2000-15151515"
+                                    className="text-sm font-mono"
+                                    maxLength={18}
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-2">
+                                <Button 
+                                    variant="outline" 
+                                    className="flex-1"
+                                    onClick={() => setEditingCustomer(null)}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button 
+                                    className="flex-1 gap-1"
+                                    onClick={handleEditSave}
+                                    disabled={savingCustomer || !editForm.customerName.trim()}
+                                >
+                                    {savingCustomer ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Check className="h-4 w-4" />
+                                    )}
+                                    Guardar
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Customers;

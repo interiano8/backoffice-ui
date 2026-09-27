@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+package-lock.json
+yarn.lock
+
+# Build & Compilation outputs
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Tests and Coverage
+coverage/
+
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# AI / IDE tools and snapshots
+.continue/
+.snapshots/
+.alpackages/
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
