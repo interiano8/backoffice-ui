@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { STATIC_STORES } from '../config/stores';
 import type { Store } from '../types/api';
 import { getAvailableDates as getAvailableDatesApi } from '../services/shift.service';
-import api from '../infrastructure/api/api-client';
+import api, { getHubURL } from '../infrastructure/api/api-client';
 
 interface AppState {
   user: { username: string; role: string; sub: number; name?: string; usuario?: string } | null;
@@ -74,7 +74,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   getStores: async () => {
     try {
-      const { data } = await api.get('/stores/public');
+      // /stores es endpoint del HUB (matriz), no de la estación activa.
+      const hub = getHubURL();
+      const { data } = await api.get(`${hub}/stores/public`);
       if (Array.isArray(data) && data.length > 0) {
         const defaultApiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3089` : 'http://localhost:3089';
         const mappedStores: Store[] = data.map((s: any) => ({
@@ -118,7 +120,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   refreshStoreConfig: async () => {
     try {
-      const { data } = await api.get('/stores/basic');
+      // /stores/basic es del hub (matriz), no de la estación.
+      const hub = getHubURL();
+      const { data } = await api.get(`${hub}/stores/basic`);
       if (!Array.isArray(data)) return;
 
       const defaultApiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3089` : 'http://localhost:3089';
