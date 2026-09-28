@@ -235,7 +235,7 @@ export const StoresPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = async () => {
     setEditingStore(null);
     setForm({
       code: '',
@@ -277,6 +277,30 @@ export const StoresPage: React.FC = () => {
         declararMontosIniciales: true,
       },
     });
+    // Pre-llenar los campos de la empresa desde la casa matriz (000)
+    try {
+      const { data } = await api.get('/stores');
+      const hq = Array.isArray(data) ? data.find((s: any) => s.code === '000') : null;
+      if (hq) {
+        setForm((prev: any) => ({
+          ...prev,
+          titulo: hq.titulo || prev.titulo,
+          RTN: hq.RTN || prev.RTN,
+          address: hq.address || prev.address,
+          emisor: hq.emisor || prev.emisor,
+          moneda: hq.moneda || prev.moneda,
+          codigoMoneda: hq.codigoMoneda || prev.codigoMoneda,
+          telefono: hq.telefono || prev.telefono,
+          correo: hq.correo || prev.correo,
+          SyncMinutes: hq.SyncMinutes ?? prev.SyncMinutes,
+          printCreditInvoices: hq.printCreditInvoices ?? prev.printCreditInvoices,
+          moduleCustomers: hq.moduleCustomers ?? prev.moduleCustomers,
+          logoUrl: hq.logoUrl || prev.logoUrl,
+        }));
+      }
+    } catch {
+      // sin HQ o error: se queda el form con defaults
+    }
     setActiveTab('general');
     setStoreHoses([]);
     setModalOpen(true);
