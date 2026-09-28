@@ -22,6 +22,8 @@ import {
   Check,
   Pencil,
   X,
+  Store,
+  Lock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -183,6 +185,9 @@ export const StoresPage: React.FC = () => {
       declararMontosIniciales: true,
     },
   });
+
+  const hqStore = stores.find((s) => s.code === '000') || null;
+  const isEditingHQ = editingStore?.code === '000' || form.code === '000';
 
   const loadStoreHoses = async (code: string) => {
     setLoadingHoses(true);
@@ -502,6 +507,18 @@ export const StoresPage: React.FC = () => {
       delete payload.dbPassword;
     }
 
+    // Si no es Casa Matriz, hereda automáticamente los datos fiscales de Casa Matriz
+    if (form.code !== '000') {
+      const hq = stores.find((s) => s.code === '000');
+      if (hq) {
+        payload.RTN = hq.RTN || payload.RTN;
+        payload.emisor = hq.emisor || payload.emisor;
+        payload.titulo = hq.titulo || payload.titulo;
+        payload.moneda = hq.moneda || payload.moneda || 'HNL';
+        payload.codigoMoneda = hq.codigoMoneda || payload.codigoMoneda || 'HNL';
+      }
+    }
+
     try {
       if (editingStore) {
         await api.patch(`/stores/${editingStore.id}`, payload);
@@ -758,7 +775,14 @@ export const StoresPage: React.FC = () => {
             const isSyncing = store.healthStatus === 'SYNCING' || syncingStore === store.code;
 
             return (
-              <Card key={store.id} className="relative overflow-hidden border-border/60 hover:shadow-lg transition-all">
+              <Card
+                key={store.id}
+                className={`relative overflow-hidden transition-all ${
+                  store.code === '000'
+                    ? 'border-amber-500/60 bg-gradient-to-b from-amber-500/[0.04] to-transparent ring-1 ring-amber-500/30 shadow-sm'
+                    : 'border-border/60 hover:shadow-lg'
+                }`}
+              >
                 <div className={`h-1.5 w-full ${isSyncing ? 'bg-blue-500 animate-pulse' : isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
@@ -907,18 +931,20 @@ export const StoresPage: React.FC = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setStoreToDelete(store);
-                            setDeleteConfirmOpen(true);
-                          }}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          title="Eliminar tienda"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {store.code !== '000' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setStoreToDelete(store);
+                              setDeleteConfirmOpen(true);
+                            }}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            title="Eliminar tienda"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -935,11 +961,30 @@ export const StoresPage: React.FC = () => {
           <form onSubmit={handleSave}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-primary" />
-                {editingStore ? 'Editar Tienda' : 'Nueva Tienda POS'}
+                {isEditingHQ ? (
+                  <>
+                    <Building2 className="w-5 h-5 text-amber-500" />
+                    <span>Configuración de Casa Matriz (000)</span>
+                    <Badge className="text-[10px] bg-amber-500/15 text-amber-600 border-amber-500/30 font-semibold">
+                      Casa Matriz
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Store className="w-5 h-5 text-primary" />
+                    <span>{editingStore ? 'Editar Tienda' : 'Nueva Tienda POS'}</span>
+                    {editingStore && (
+                      <span className="text-muted-foreground text-sm font-normal">
+                        ({editingStore.name} - {editingStore.code})
+                      </span>
+                    )}
+                  </>
+                )}
               </DialogTitle>
               <DialogDescription>
-                Aprovisionamiento y configuración centralizada de la estación de servicio y POS local.
+                {isEditingHQ
+                  ? 'Configuración central de la empresa. Los datos fiscales y comerciales definidos aquí se heredan a todas las tiendas de la red.'
+                  : 'Aprovisionamiento y configuración operativa de la sucursal. Los datos fiscales de la empresa son heredados de Casa Matriz (000).'}
               </DialogDescription>
             </DialogHeader>
 
@@ -1002,175 +1047,348 @@ export const StoresPage: React.FC = () => {
 
             {/* TAB: GENERAL */}
             {activeTab === 'general' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                {/* ===== Sección: Identidad de la Tienda (propia de la sucursal) ===== */}
-                <div className="col-span-full text-[11px] font-bold uppercase tracking-wider text-primary">◇ Identidad de la Tienda</div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="code" className="text-xs font-medium">Código de Tienda *</Label>
-                  <Input
-                    id="code"
-                    placeholder="Ej. 001"
-                    value={form.code}
-                    disabled={!!editingStore}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.trim() })}
-                    required
-                  />
-                  <p className="text-[11px] text-muted-foreground">Identificador único asignado al POS (STORE_CODE).</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-xs font-medium">Nombre de Tienda *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ej. ESTACIÓN EL RECREO"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                {/*
-                  ==================================================
-                  Sección: Datos de la Empresa (Casa Matriz 000)
-                  Heredados de la casa matriz al crear la tienda;
-                  editables solo si esta tienda difiere de la empresa.
-                  ==================================================
-                */}
-                <div className="col-span-full mt-4 border-t pt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">◆ Datos de la Empresa</span>
-                    <span className="rounded bg-amber-500/10 text-amber-600 border border-amber-500/30 px-2 py-0.5 text-[10px] font-medium">
-                      Heredado de la Casa Matriz (000) · opcional
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="rtn" className="text-xs font-medium">RTN</Label>
-                  <Input
-                    id="rtn"
-                    placeholder="Ej. 06019995197170"
-                    value={form.RTN || ''}
-                    onChange={(e) => setForm({ ...form, RTN: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="emisor" className="text-xs font-medium">Emisor / Razón Social</Label>
-                  <Input
-                    id="emisor"
-                    placeholder="Ej. INVERSIONES EL RECREO S.A."
-                    value={form.emisor || ''}
-                    onChange={(e) => setForm({ ...form, emisor: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="titulo" className="text-xs font-medium">Título Comercial</Label>
-                  <Input
-                    id="titulo"
-                    placeholder="Ej. Gasolinera Shell Recreo"
-                    value={form.titulo || ''}
-                    onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="telefono" className="text-xs font-medium">Teléfono</Label>
-                  <Input
-                    id="telefono"
-                    placeholder="Ej. +504 2234-5678"
-                    value={form.telefono || ''}
-                    onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="correo" className="text-xs font-medium">Correo Electrónico</Label>
-                  <Input
-                    id="correo"
-                    type="email"
-                    placeholder="Ej. administracion@estacion.com"
-                    value={form.correo || ''}
-                    onChange={(e) => setForm({ ...form, correo: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="moneda" className="text-xs font-medium">Moneda / Símbolo</Label>
-                  <Input
-                    id="moneda"
-                    placeholder="HNL"
-                    value={form.moneda || 'HNL'}
-                    onChange={(e) => setForm({ ...form, moneda: e.target.value, codigoMoneda: e.target.value })}
-                  />
-                </div>
-
-                <div className="col-span-full space-y-1.5">
-                  <Label htmlFor="address" className="text-xs font-medium">Dirección</Label>
-                  <Input
-                    id="address"
-                    placeholder="Ej. Barrio El Recreo, Tegucigalpa"
-                    value={form.address || ''}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  />
-                </div>
-
-                <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium">Estado de la Estación</div>
-                    <div className="text-xs text-muted-foreground">Habilita o deshabilita la estación en el ecosistema Matriz</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={form.isActive ?? true}
-                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
-                  />
-                </div>
-
-                {/* ===== Sección: Módulos Opcionales del Sistema ===== */}
-                <div className="col-span-full mt-4 border-t pt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-primary">◇ Módulos Habilitados en Backoffice</span>
-                  </div>
-                </div>
-
-                <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                      Módulo de Contabilidad General
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Habilita o deshabilita la contabilidad, libro diario, partidas automáticas y estados financieros para esta estación
+              isEditingHQ ? (
+                /* ================= VISTA CASA MATRIZ (000) ================= */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                  <div className="col-span-full p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
+                    <Building2 className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-800 space-y-0.5">
+                      <div className="font-semibold text-amber-900">Configuración Central de Casa Matriz (000)</div>
+                      <div>
+                        Aquí se definen la razón social, RTN, título comercial y moneda base de la empresa.
+                        Todas las tiendas y sucursales heredan automáticamente esta información para su facturación fiscal y reportes.
+                      </div>
                     </div>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={form.moduleAccounting !== 0}
-                    onChange={(e) => setForm({ ...form, moduleAccounting: e.target.checked ? 1 : 0 })}
-                    className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
-                  />
-                </div>
 
-                <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                      Módulo de Clientes & Créditos (CxC)
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Habilita o deshabilita la gestión de clientes a crédito y estados de cuenta en el panel
+                  <div className="space-y-1.5">
+                    <Label htmlFor="code" className="text-xs font-medium">Código de Matriz</Label>
+                    <Input
+                      id="code"
+                      value="000"
+                      disabled
+                      className="bg-muted font-mono font-bold"
+                    />
+                    <p className="text-[11px] text-muted-foreground">Identificador maestro asignado a la Casa Matriz.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name" className="text-xs font-medium">Nombre de la Casa Matriz *</Label>
+                    <Input
+                      id="name"
+                      placeholder="Ej. Casa Matriz Inversiones Shell"
+                      value={form.name || ''}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-span-full mt-2 border-t pt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                        ◆ Datos Fiscales Corporativos (Heredados a todas las tiendas)
+                      </span>
                     </div>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={form.moduleCustomers !== 0}
-                    onChange={(e) => setForm({ ...form, moduleCustomers: e.target.checked ? 1 : 0 })}
-                    className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
-                  />
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rtn" className="text-xs font-medium">RTN de la Empresa *</Label>
+                    <Input
+                      id="rtn"
+                      placeholder="Ej. 06019995197170"
+                      value={form.RTN || ''}
+                      onChange={(e) => setForm({ ...form, RTN: e.target.value })}
+                      required
+                    />
+                    <p className="text-[11px] text-muted-foreground">Registro Tributario Nacional de la empresa emisora.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="emisor" className="text-xs font-medium">Razón Social / Emisor Legal *</Label>
+                    <Input
+                      id="emisor"
+                      placeholder="Ej. INVERSIONES EL RECREO S.A. DE C.V."
+                      value={form.emisor || ''}
+                      onChange={(e) => setForm({ ...form, emisor: e.target.value })}
+                      required
+                    />
+                    <p className="text-[11px] text-muted-foreground">Nombre legal en los comprobantes fiscales SAR.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="titulo" className="text-xs font-medium">Título Comercial de la Red</Label>
+                    <Input
+                      id="titulo"
+                      placeholder="Ej. Gasolineras Shell"
+                      value={form.titulo || ''}
+                      onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">Nombre de marca comercial visible.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="moneda" className="text-xs font-medium">Moneda Base de Facturación</Label>
+                    <Input
+                      id="moneda"
+                      placeholder="HNL"
+                      value={form.moneda || 'HNL'}
+                      onChange={(e) => setForm({ ...form, moneda: e.target.value, codigoMoneda: e.target.value })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">Moneda oficial del sistema (ej. HNL, USD).</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telefono" className="text-xs font-medium">Teléfono Corporativo / PBX</Label>
+                    <Input
+                      id="telefono"
+                      placeholder="Ej. +504 2234-5678"
+                      value={form.telefono || ''}
+                      onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="correo" className="text-xs font-medium">Correo Electrónico Corporativo</Label>
+                    <Input
+                      id="correo"
+                      type="email"
+                      placeholder="Ej. administracion@empresa.com"
+                      value={form.correo || ''}
+                      onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-full space-y-1.5">
+                    <Label htmlFor="address" className="text-xs font-medium">Dirección Fiscal Corporativa</Label>
+                    <Input
+                      id="address"
+                      placeholder="Ej. Tegucigalpa M.D.C., Honduras"
+                      value={form.address || ''}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Estado de Casa Matriz</div>
+                      <div className="text-xs text-muted-foreground">Habilitar Casa Matriz en el ecosistema</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.isActive ?? true}
+                      onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                      className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                    />
+                  </div>
+
+                  <div className="col-span-full mt-2 border-t pt-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-primary">◇ Módulos Habilitados en Backoffice</span>
+                    </div>
+                  </div>
+
+                  <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-semibold text-foreground">Módulo de Contabilidad General</div>
+                      <div className="text-xs text-muted-foreground">Habilitar contabilidad, libro diario y reportes financieros</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.moduleAccounting !== 0}
+                      onChange={(e) => setForm({ ...form, moduleAccounting: e.target.checked ? 1 : 0 })}
+                      className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                    />
+                  </div>
+
+                  <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-semibold text-foreground">Módulo de Clientes & Créditos (CxC)</div>
+                      <div className="text-xs text-muted-foreground">Habilitar clientes a crédito y estados de cuenta</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.moduleCustomers !== 0}
+                      onChange={(e) => setForm({ ...form, moduleCustomers: e.target.checked ? 1 : 0 })}
+                      className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* ================= VISTA TIENDA / SUCURSAL ================= */
+                <div className="space-y-6 py-4">
+                  {/* SECCIÓN 1: DATOS PROPIOS DE LA SUCURSAL */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <div className="flex items-center gap-2">
+                        <Store className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                          1. Información Propia de la Tienda / Sucursal
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                        Configuración local de la estación
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="code" className="text-xs font-medium">Código de Tienda (STORE_CODE) *</Label>
+                        <Input
+                          id="code"
+                          placeholder="Ej. 001"
+                          value={form.code}
+                          disabled={!!editingStore}
+                          onChange={(e) => setForm({ ...form, code: e.target.value.trim() })}
+                          required
+                          className="font-mono font-bold"
+                        />
+                        <p className="text-[11px] text-muted-foreground">Identificador único asignado al POS (ej. 001, 002).</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="name" className="text-xs font-medium">Nombre de la Sucursal / Estación *</Label>
+                        <Input
+                          id="name"
+                          placeholder="Ej. ESTACIÓN EL RECREO"
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          required
+                        />
+                        <p className="text-[11px] text-muted-foreground">Nombre descriptivo de esta estación.</p>
+                      </div>
+
+                      <div className="col-span-full space-y-1.5">
+                        <Label htmlFor="address" className="text-xs font-medium">Dirección Física de la Estación</Label>
+                        <Input
+                          id="address"
+                          placeholder="Ej. Barrio El Recreo, Boulevard del Norte, Tegucigalpa"
+                          value={form.address || ''}
+                          onChange={(e) => setForm({ ...form, address: e.target.value })}
+                        />
+                        <p className="text-[11px] text-muted-foreground">Ubicación física de la pista o tienda.</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="telefono" className="text-xs font-medium">Teléfono de la Estación</Label>
+                        <Input
+                          id="telefono"
+                          placeholder="Ej. +504 2234-5678"
+                          value={form.telefono || ''}
+                          onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="correo" className="text-xs font-medium">Correo Electrónico de la Estación</Label>
+                        <Input
+                          id="correo"
+                          type="email"
+                          placeholder="Ej. estacion01@empresa.com"
+                          value={form.correo || ''}
+                          onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">Estado Operativo de la Estación</div>
+                          <div className="text-xs text-muted-foreground">Habilitar o suspender operaciones de esta estación</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={form.isActive ?? true}
+                          onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                          className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                        />
+                      </div>
+
+                      <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-semibold text-foreground">Módulo de Contabilidad General</div>
+                          <div className="text-xs text-muted-foreground">Habilitar partidas automáticas y estados financieros para esta estación</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={form.moduleAccounting !== 0}
+                          onChange={(e) => setForm({ ...form, moduleAccounting: e.target.checked ? 1 : 0 })}
+                          className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                        />
+                      </div>
+
+                      <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-semibold text-foreground">Módulo de Clientes & Créditos (CxC)</div>
+                          <div className="text-xs text-muted-foreground">Habilitar despacho y facturación a crédito en esta estación</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={form.moduleCustomers !== 0}
+                          onChange={(e) => setForm({ ...form, moduleCustomers: e.target.checked ? 1 : 0 })}
+                          className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECCIÓN 2: INFORMACIÓN DE CASA MATRIZ (HEREDADA - SOLO LECTURA) */}
+                  <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                          2. Información Corporativa (Heredada de Casa Matriz 000)
+                        </span>
+                      </div>
+                      <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 text-[10px] font-medium flex items-center gap-1">
+                        <Lock className="w-2.5 h-2.5" />
+                        Solo Lectura
+                      </Badge>
+                    </div>
+
+                    <p className="text-[11px] text-amber-800/80">
+                      Esta tienda hereda automáticamente los datos fiscales y comerciales de la <strong>Casa Matriz ({hqStore?.name || '000'})</strong>.
+                      Estos datos se imprimen en comprobantes fiscales y facturas. Para modificarlos, edite la Casa Matriz directamente.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                      <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Razón Social / Emisor</span>
+                        <span className="text-xs font-semibold text-foreground truncate block mt-0.5" title={hqStore?.emisor || hqStore?.name}>
+                          {hqStore?.emisor || hqStore?.name || 'No configurado en Matriz'}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">RTN Corporativo</span>
+                        <span className="text-xs font-mono font-bold text-foreground block mt-0.5">
+                          {hqStore?.RTN || 'No configurado en Matriz'}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Título Comercial</span>
+                        <span className="text-xs font-medium text-foreground truncate block mt-0.5">
+                          {hqStore?.titulo || hqStore?.name || '-'}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Moneda de Facturación</span>
+                        <span className="text-xs font-mono font-bold text-foreground block mt-0.5">
+                          {hqStore?.moneda || 'HNL'}
+                        </span>
+                      </div>
+
+                      <div className="sm:col-span-2 p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Dirección Fiscal Matriz</span>
+                        <span className="text-xs text-muted-foreground truncate block mt-0.5">
+                          {hqStore?.address || 'No configurada'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
             )}
 
             {/* TAB: WAYNE FUSION */}
