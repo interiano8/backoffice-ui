@@ -6,6 +6,7 @@ export interface User {
   sub: number;
   name?: string;
   usuario?: string;
+  email?: string;
 }
 
 export interface Store {

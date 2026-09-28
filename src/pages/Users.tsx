@@ -15,6 +15,7 @@ interface UserData {
   id: string;
   username: string;
   name: string;
+  email?: string;
   role: string;
   roles?: string[];
   isActive: boolean;
@@ -60,6 +61,7 @@ export const UsersPage: React.FC = () => {
     username: '',
     password: '',
     name: '',
+    email: '',
     pin: '',
     role: 'ADMIN',
     roles: ['ADMIN'] as string[],
@@ -111,6 +113,7 @@ export const UsersPage: React.FC = () => {
       username: '',
       password: '',
       name: '',
+      email: '',
       pin: '',
       role: 'ADMIN',
       roles: ['ADMIN'],
@@ -128,6 +131,7 @@ export const UsersPage: React.FC = () => {
       username: user.username,
       password: '',
       name: user.name,
+      email: user.email || '',
       pin: '',
       role: userRoles[0] || 'ADMIN',
       roles: userRoles,
@@ -162,6 +166,16 @@ export const UsersPage: React.FC = () => {
       toast.error('Usuario y nombre son requeridos');
       return;
     }
+    const cleanEmail = form.email.trim();
+    if (!editingUser && !cleanEmail) {
+      toast.error('El correo electrónico es obligatorio');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (cleanEmail && !emailRegex.test(cleanEmail)) {
+      toast.error('El correo electrónico no tiene un formato válido');
+      return;
+    }
     if (!editingUser && !form.password) {
       toast.error('Contraseña es requerida');
       return;
@@ -176,6 +190,7 @@ export const UsersPage: React.FC = () => {
       let targetUserId = editingUser?.id;
       if (editingUser) {
         const payload: any = { name: form.name, role: form.role };
+        if (cleanEmail) payload.email = cleanEmail;
         if (form.password) payload.password = form.password;
         if (form.pin) payload.pin = form.pin;
         if (form.codigoRfid) payload.codigoRfid = form.codigoRfid;
@@ -186,6 +201,7 @@ export const UsersPage: React.FC = () => {
           username: form.username,
           password: form.password,
           name: form.name,
+          email: cleanEmail,
           role: form.role,
           pin: form.pin,
           codigoRfid: form.codigoRfid,
@@ -275,6 +291,7 @@ export const UsersPage: React.FC = () => {
                   <TableRow className="sticky top-0 bg-card hover:bg-card z-10 shadow-[0_1px_0_0] shadow-border">
                     <TableHead className="w-[140px]">Usuario</TableHead>
                     <TableHead>Nombre</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead className="w-[80px] text-center">PIN Leal</TableHead>
                     <TableHead className="min-w-[180px]">Roles Asignados</TableHead>
                     <TableHead className="w-[80px] text-center">RFID</TableHead>
@@ -293,6 +310,9 @@ export const UsersPage: React.FC = () => {
                           {user.username}
                         </TableCell>
                         <TableCell className="text-sm py-1.5">{user.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground py-1.5">
+                          {user.email || '—'}
+                        </TableCell>
                         <TableCell className="text-center py-1.5">
                           {isIndicador(user.pin) ? (
                             <Check className="h-4 w-4 text-emerald-500 mx-auto" />
@@ -397,6 +417,19 @@ export const UsersPage: React.FC = () => {
                   className="h-9"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                Correo Electrónico {editingUser ? '(opcional)' : '*'}
+              </label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="usuario@ejemplo.com"
+                className="h-9"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

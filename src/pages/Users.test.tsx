@@ -18,6 +18,7 @@ describe('UsersPage & RBAC Multi-role Management', () => {
       id: 'u-1',
       username: 'carlos',
       name: 'Carlos Mendoza',
+      email: 'carlos@estacion.com',
       role: 'ADMIN',
       roles: ['ADMIN'],
       isActive: true,
@@ -205,6 +206,53 @@ describe('UsersPage & RBAC Multi-role Management', () => {
       expect(api.post).toHaveBeenCalledWith('/users/u-1/roles', {
         roleIds: expect.arrayContaining(['ADMIN', 'SUPERVISOR']),
       });
+    });
+  });
+
+  it('muestra la columna Email y el correo en la tabla', async () => {
+    render(<UsersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Email')).toBeInTheDocument();
+      expect(screen.getByText('carlos@estacion.com')).toBeInTheDocument();
+    });
+  });
+
+  it('requiere y valida el email al crear un nuevo usuario', async () => {
+    (api.post as any).mockResolvedValueOnce({ data: { id: 'u-3', username: 'nuevo' } });
+
+    render(<UsersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Carlos Mendoza')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Nuevo Usuario/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('usuario@ejemplo.com')).toBeInTheDocument();
+    });
+
+    const userInput = screen.getByPlaceholderText('usuario');
+    const nameInput = screen.getByPlaceholderText('Nombre completo');
+    const emailInput = screen.getByPlaceholderText('usuario@ejemplo.com');
+    const passwordInput = screen.getByPlaceholderText('Requerida');
+
+    fireEvent.change(userInput, { target: { value: 'nuevo' } });
+    fireEvent.change(nameInput, { target: { value: 'Nuevo Usuario' } });
+    fireEvent.change(emailInput, { target: { value: 'nuevo@empresa.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'pass123' } });
+
+    const saveBtn = screen.getByRole('button', { name: /Crear/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/users', expect.objectContaining({
+        username: 'nuevo',
+        name: 'Nuevo Usuario',
+        email: 'nuevo@empresa.com',
+        password: 'pass123',
+      }));
     });
   });
 });
