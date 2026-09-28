@@ -625,6 +625,11 @@ export const StoresPage: React.FC = () => {
                         <Badge variant="outline" className="font-mono text-xs font-bold">
                           {store.code}
                         </Badge>
+                        {store.code === '000' && (
+                          <Badge className="text-[10px] bg-amber-500/15 text-amber-600 border-amber-500/30 font-semibold flex items-center gap-1">
+                            <Building2 className="w-2.5 h-2.5" /> Casa Matriz
+                          </Badge>
+                        )}
                         {(store.ip === 'cloudflared' || store.ip === 'tunnel' || !store.ip) && (
                           <Badge variant="outline" className="text-[10px] bg-sky-500/10 text-sky-500 border-sky-500/20 font-medium flex items-center gap-1">
                             <Cloud className="w-2.5 h-2.5" /> Tunnel
@@ -847,6 +852,9 @@ export const StoresPage: React.FC = () => {
             {/* TAB: GENERAL */}
             {activeTab === 'general' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                {/* ===== Sección: Identidad de la Tienda (propia de la sucursal) ===== */}
+                <div className="col-span-full text-[11px] font-bold uppercase tracking-wider text-primary">◇ Identidad de la Tienda</div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="code" className="text-xs font-medium">Código de Tienda *</Label>
                   <Input
@@ -869,6 +877,22 @@ export const StoresPage: React.FC = () => {
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                   />
+                </div>
+
+                {/*
+                  ==================================================
+                  Sección: Datos de la Empresa (Casa Matriz 000)
+                  Heredados de la casa matriz al crear la tienda;
+                  editables solo si esta tienda difiere de la empresa.
+                  ==================================================
+                */}
+                <div className="col-span-full mt-4 border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">◆ Datos de la Empresa</span>
+                    <span className="rounded bg-amber-500/10 text-amber-600 border border-amber-500/30 px-2 py-0.5 text-[10px] font-medium">
+                      Heredado de la Casa Matriz (000) · opcional
+                    </span>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
