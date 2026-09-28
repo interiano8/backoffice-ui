@@ -18,6 +18,7 @@ const StoresPage = lazy(() => import('./pages/Stores').then(m => ({ default: m.S
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const AlertsConfigPage = lazy(() => import('./pages/AlertsConfig').then(m => ({ default: m.AlertsConfigPage })));
+const AccountingPage = lazy(() => import('./pages/Accounting').then(m => ({ default: m.AccountingPage })));
 import { AlertsBell } from './components/AlertsBell';
 import { PageLoader } from './components/PageLoader';
 
@@ -62,6 +63,7 @@ import {
   Coins,
   Building2,
   Bell,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from "@/lib/utils"
 import { Toaster } from 'sonner';
@@ -108,6 +110,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     { path: '/leal', label: 'Leal', icon: Coins },
     { path: '/ctrl', label: 'CTRL', icon: Activity },
     { path: '/documents', label: 'Documentos', icon: Files },
+    { path: '/contabilidad', label: 'Contabilidad', icon: BookOpen },
     { path: '/tiendas', label: 'Tiendas', icon: Building2 },
     { path: '/users', label: 'Usuarios', icon: UserCog },
     { path: '/customers', label: 'Clientes', icon: Users },
@@ -360,6 +363,7 @@ function AnimatedRoutes() {
             <Route path="/users" element={<RequireStore><UsersPage /></RequireStore>} />
             <Route path="/tiendas" element={<StoresPage />} />
             <Route path="/alertas" element={<AlertsConfigPage />} />
+            <Route path="/contabilidad" element={<AccountingPage />} />
           </Routes>
         </Suspense>
       </motion.div>
