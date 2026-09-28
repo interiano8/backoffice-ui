@@ -26,6 +26,7 @@ export interface Store {
   frontendUrl?: string;
   isLocalStore?: boolean;
   moduleCustomers?: number;
+  moduleAccounting?: number;
   printCreditInvoices?: boolean;
   SyncMinutes?: number;
   PresentationMinutes?: number;

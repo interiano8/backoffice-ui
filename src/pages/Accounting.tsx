@@ -18,6 +18,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { useAppStore } from '../store/useAppStore';
 
 import { AccountsCatalogTab } from './accounting/AccountsCatalogTab';
 import { AccountingMappingTab } from './accounting/AccountingMappingTab';
@@ -28,7 +30,11 @@ import { accountingService, AccountItem, CostCenterItem } from '../services/acco
 type ActiveTab = 'JOURNAL' | 'CATALOG' | 'MAPPING' | 'REPORTS';
 
 export const AccountingPage: React.FC = () => {
+  const { selectedStore } = useAppStore();
   const [activeTab, setActiveTab] = useState<ActiveTab>('JOURNAL');
+
+  const isAccountingDisabled =
+    selectedStore && selectedStore.code !== 'GLOBAL' && selectedStore.moduleAccounting === 0;
 
   // Modal: Registrar Abono CxC (Customer Payment)
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -120,6 +126,29 @@ export const AccountingPage: React.FC = () => {
       setGeneratingShift(false);
     }
   };
+
+  if (isAccountingDisabled) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 space-y-4">
+        <div className="p-4 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+          <BookOpen className="w-10 h-10" />
+        </div>
+        <div className="max-w-md space-y-2">
+          <h2 className="text-xl font-bold text-foreground">Módulo de Contabilidad Deshabilitado</h2>
+          <p className="text-sm text-muted-foreground">
+            La contabilidad se encuentra actualmente inactiva para la estación{' '}
+            <strong className="text-foreground">{selectedStore?.name} ({selectedStore?.code})</strong>.
+            Puedes activarla o desactivarla en cualquier momento desde la sección de Tiendas.
+          </p>
+        </div>
+        <Link to="/tiendas">
+          <Button variant="outline" className="gap-2">
+            Ir a Configuración de Tiendas
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -119,6 +119,12 @@ const Layout = ({ children }: { children: ReactNode }) => {
     if (item.path === '/customers') {
       return selectedStore?.moduleCustomers !== 0;
     }
+    if (item.path === '/contabilidad') {
+      if (selectedStore?.code === 'GLOBAL') {
+        return stores.length === 0 || stores.some(s => s.moduleAccounting !== 0);
+      }
+      return selectedStore?.moduleAccounting !== 0;
+    }
     return true;
   });
 

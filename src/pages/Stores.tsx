@@ -81,6 +81,7 @@ interface StoreItem {
   lastSyncStatus?: string | null;
   lastSyncError?: string | null;
   moduleCustomers?: number;
+  moduleAccounting?: number;
   printCreditInvoices?: boolean;
   SyncMinutes?: number;
   PresentationMinutes?: number;
@@ -251,6 +252,8 @@ export const StoresPage: React.FC = () => {
       dbSsl: false,
       isActive: true,
       SyncMinutes: 5,
+      moduleCustomers: 1,
+      moduleAccounting: 1,
       ipFusion: '192.168.10.51',
       urlControlador: 'http://localhost:5008',
       claveControlador: '',
@@ -295,6 +298,7 @@ export const StoresPage: React.FC = () => {
           SyncMinutes: hq.SyncMinutes ?? prev.SyncMinutes,
           printCreditInvoices: hq.printCreditInvoices ?? prev.printCreditInvoices,
           moduleCustomers: hq.moduleCustomers ?? prev.moduleCustomers,
+          moduleAccounting: hq.moduleAccounting ?? prev.moduleAccounting,
           logoUrl: hq.logoUrl || prev.logoUrl,
         }));
       }
@@ -310,6 +314,8 @@ export const StoresPage: React.FC = () => {
     setEditingStore(store);
     setForm({
       ...store,
+      moduleCustomers: store.moduleCustomers ?? 1,
+      moduleAccounting: store.moduleAccounting ?? 1,
       ipFusion: store.ipFusion || '192.168.10.51',
       urlControlador: store.urlControlador || 'http://localhost:5008',
       claveControlador: store.claveControlador || '',
@@ -638,6 +644,15 @@ export const StoresPage: React.FC = () => {
                         <Badge variant="outline" className="text-[10px] bg-muted/60 font-mono text-muted-foreground">
                           v{store.masterVersion || 1}
                         </Badge>
+                        {store.moduleAccounting !== 0 ? (
+                          <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-medium">
+                            Contabilidad ON
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] bg-muted/40 text-muted-foreground border-border font-medium">
+                            Contabilidad OFF
+                          </Badge>
+                        )}
                         {isSyncing ? (
                           <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs flex items-center gap-1">
                             <RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando
@@ -975,6 +990,47 @@ export const StoresPage: React.FC = () => {
                     type="checkbox"
                     checked={form.isActive ?? true}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                  />
+                </div>
+
+                {/* ===== Sección: Módulos Opcionales del Sistema ===== */}
+                <div className="col-span-full mt-4 border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-primary">◇ Módulos Habilitados en Backoffice</span>
+                  </div>
+                </div>
+
+                <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                      Módulo de Contabilidad General
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Habilita o deshabilita la contabilidad, libro diario, partidas automáticas y estados financieros para esta estación
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={form.moduleAccounting !== 0}
+                    onChange={(e) => setForm({ ...form, moduleAccounting: e.target.checked ? 1 : 0 })}
+                    className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                  />
+                </div>
+
+                <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                      Módulo de Clientes & Créditos (CxC)
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Habilita o deshabilita la gestión de clientes a crédito y estados de cuenta en el panel
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={form.moduleCustomers !== 0}
+                    onChange={(e) => setForm({ ...form, moduleCustomers: e.target.checked ? 1 : 0 })}
                     className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
                   />
                 </div>
