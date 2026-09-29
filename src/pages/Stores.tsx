@@ -42,6 +42,7 @@ import {
 import api from '../infrastructure/api/api-client';
 import { useAppStore } from '../store/useAppStore';
 import { isAdmin, can } from '../services/auth.service';
+import { FuelProduct, DEFAULT_FUEL_PRODUCTS } from '../lib/fuelProducts';
 
 export interface PosConfigData {
   codigoPos?: string;
@@ -146,6 +147,74 @@ export const StoresPage: React.FC = () => {
   const [hoseToDelete, setHoseToDelete] = useState<any | null>(null);
   const [deletingHose, setDeletingHose] = useState(false);
 
+  // Store Fuel Catalog State
+  const [catalogProducts, setCatalogProducts] = useState<FuelProduct[]>(DEFAULT_FUEL_PRODUCTS);
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string>('1');
+  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
+  const [editingCatalogProd, setEditingCatalogProd] = useState<FuelProduct | null>(null);
+  const [catalogForm, setCatalogForm] = useState<FuelProduct>({
+    id: '',
+    gradeName: 'GASOLINA SUPERIOR',
+    genericCode: 'SUPER',
+    posCode: 'SUPER',
+    tankId: '1',
+    gradeId: 1,
+  });
+
+  const handleOpenAddCatalogProduct = () => {
+    setEditingCatalogProd(null);
+    setCatalogForm({
+      id: String(Date.now()),
+      gradeName: 'GASOLINA SUPERIOR',
+      genericCode: 'SUPER',
+      posCode: 'SUPER',
+      tankId: String(catalogProducts.length + 1),
+      gradeId: catalogProducts.length + 1,
+    });
+    setCatalogModalOpen(true);
+  };
+
+  const handleOpenEditCatalogProduct = (prod: FuelProduct) => {
+    setEditingCatalogProd(prod);
+    setCatalogForm({ ...prod });
+    setCatalogModalOpen(true);
+  };
+
+  const handleSaveCatalogProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catalogForm.gradeName.trim() || !catalogForm.genericCode.trim()) {
+      toast.error('Nombre de producto y Código POS son obligatorios');
+      return;
+    }
+    const genericCode = catalogForm.genericCode.trim().toUpperCase();
+    const formattedItem: FuelProduct = {
+      ...catalogForm,
+      gradeName: catalogForm.gradeName.trim().toUpperCase(),
+      genericCode,
+      posCode: genericCode,
+      tankId: String(catalogForm.tankId || '').trim(),
+      gradeId: Number(catalogForm.gradeId) || 1,
+    };
+    let updated: FuelProduct[];
+    if (editingCatalogProd) {
+      updated = catalogProducts.map((p) => (p.id === editingCatalogProd.id ? formattedItem : p));
+    } else {
+      updated = [...catalogProducts, { ...formattedItem, id: formattedItem.id || String(Date.now()) }];
+    }
+    setCatalogProducts(updated);
+    setCatalogModalOpen(false);
+    toast.success('Producto guardado en el catálogo');
+  };
+
+  const handleDeleteCatalogProduct = (id: string) => {
+    if (catalogProducts.length <= 1) {
+      toast.error('Debe mantener al menos 1 producto en el catálogo');
+      return;
+    }
+    setCatalogProducts((prev) => prev.filter((p) => p.id !== id));
+    toast.success('Producto eliminado del catálogo');
+  };
+
   const [form, setForm] = useState<Partial<StoreItem>>({
     code: '',
     name: '',
@@ -226,28 +295,34 @@ export const StoresPage: React.FC = () => {
         nextHose = maxHoseInPump + 1;
       }
     }
+    const firstProd = catalogProducts[0] || DEFAULT_FUEL_PRODUCTS[0];
+    setSelectedCatalogId(firstProd.id);
     setEditingHose(null);
     setHoseForm({
       pumpId: nextPump,
       hoseId: nextHose,
-      gradeName: 'GASOLINA SUPERIOR',
-      genericCode: 'SUPER',
-      gradeId: 1,
-      tankId: String(nextHose),
+      gradeName: firstProd.gradeName,
+      genericCode: firstProd.genericCode,
+      gradeId: firstProd.gradeId,
+      tankId: firstProd.tankId,
       active: true,
     });
     setHoseModalOpen(true);
   };
 
   const handleOpenEditHose = (hose: any) => {
+    const matched = catalogProducts.find(
+      (p) => p.genericCode === (hose.genericCode || hose.posCode) || p.gradeName === (hose.fuelGradeName || hose.productName || hose.gradeName),
+    ) || catalogProducts[0] || DEFAULT_FUEL_PRODUCTS[0];
+    setSelectedCatalogId(matched?.id || '');
     setEditingHose(hose);
     setHoseForm({
       pumpId: hose.pumpId ?? hose.pumpNumber ?? 1,
       hoseId: hose.hoseId ?? hose.hoseNumber ?? 1,
-      gradeName: hose.fuelGradeName || hose.productName || hose.gradeName || 'GASOLINA SUPERIOR',
-      genericCode: hose.genericCode || hose.posCode || 'SUPER',
-      gradeId: hose.gradeId || 1,
-      tankId: hose.tankId ? String(hose.tankId) : '',
+      gradeName: hose.fuelGradeName || hose.productName || hose.gradeName || matched.gradeName,
+      genericCode: hose.genericCode || hose.posCode || matched.genericCode,
+      gradeId: hose.gradeId || matched.gradeId,
+      tankId: hose.tankId ? String(hose.tankId) : matched.tankId,
       active: hose.active ?? true,
     });
     setHoseModalOpen(true);
@@ -1513,6 +1588,72 @@ export const StoresPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* CATÁLOGO DE PRODUCTOS DE LA ESTACIÓN */}
+                {editingStore && (
+                  <Card className="border border-border/60 bg-card shadow-sm mb-4">
+                    <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b">
+                      <div>
+                        <CardTitle className="text-xs font-bold flex items-center gap-2">
+                          <Fuel className="w-4 h-4 text-primary" />
+                          Catálogo de Productos de Combustible
+                        </CardTitle>
+                        <CardDescription className="text-[11px]">
+                          Productos definidos para esta estación. Se seleccionan directamente al registrar bombas y mangueras.
+                        </CardDescription>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleOpenAddCatalogProduct}
+                        className="gap-1 text-xs h-7"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Agregar Producto
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="p-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {catalogProducts.map((prod) => (
+                          <div key={prod.id} className="p-2.5 rounded-md border bg-muted/20 flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-xs text-foreground flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-primary" />
+                                {prod.gradeName}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                                POS: <span className="font-bold text-foreground">{prod.genericCode}</span> | Tanque: {prod.tankId ? `T-${prod.tankId}` : '-'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleOpenEditCatalogProduct(prod)}
+                                title="Editar producto del catálogo"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDeleteCatalogProduct(prod.id)}
+                                title="Eliminar producto del catálogo"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {!editingStore ? (
                   <div className="p-8 text-center border rounded-lg bg-muted/20 text-muted-foreground text-xs">
                     Guarde la tienda primero para poder consultar y configurar sus mangueras.
@@ -1812,81 +1953,46 @@ export const StoresPage: React.FC = () => {
 
               <div className="col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="gradeName" className="text-xs font-medium">Nombre del Producto / Combustible *</Label>
-                  <span className="text-[10px] text-muted-foreground">Presets rápidos abajo</span>
+                  <Label htmlFor="h-selectCatalog" className="text-xs font-medium">Producto / Combustible Asignado *</Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">Seleccionado del catálogo</span>
                 </div>
-                <Input
-                  id="gradeName"
-                  placeholder="Ej. Gasolina Súper 95 Oct"
-                  value={hoseForm.gradeName}
-                  onChange={(e) => setHoseForm({ ...hoseForm, gradeName: e.target.value.toUpperCase() })}
-                  required
-                />
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    { label: 'Súper', name: 'GASOLINA SUPERIOR', code: 'SUPER', gradeId: 1 },
-                    { label: 'Regular', name: 'GASOLINA REGULAR', code: 'REGULAR', gradeId: 2 },
-                    { label: 'Diésel', name: 'DIESEL 50PPM', code: 'DIESEL', gradeId: 3 },
-                    { label: 'Kerosene', name: 'KEROSENE', code: 'KEROSENE', gradeId: 4 },
-                    { label: 'GLP', name: 'GLP', code: 'GLP', gradeId: 5 },
-                  ].map((p) => (
-                    <button
-                      key={p.code}
-                      type="button"
-                      onClick={() => setHoseForm({
+                <select
+                  id="h-selectCatalog"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={selectedCatalogId}
+                  onChange={(e) => {
+                    const prod = catalogProducts.find((p) => p.id === e.target.value);
+                    if (prod) {
+                      setSelectedCatalogId(prod.id);
+                      setHoseForm({
                         ...hoseForm,
-                        gradeName: p.name,
-                        genericCode: p.code,
-                        gradeId: p.gradeId,
-                      })}
-                      className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                        hoseForm.genericCode === p.code
-                          ? 'bg-primary text-primary-foreground border-primary font-medium'
-                          : 'bg-muted/40 hover:bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      + {p.label} ({p.code})
-                    </button>
+                        gradeName: prod.gradeName,
+                        genericCode: prod.genericCode,
+                        gradeId: prod.gradeId,
+                        tankId: prod.tankId,
+                      });
+                    }
+                  }}
+                >
+                  {catalogProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.gradeName} — ({p.genericCode} | Tanque {p.tankId ? `T-${p.tankId}` : '-'})
+                    </option>
                   ))}
+                </select>
+
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs flex flex-col gap-1 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">{hoseForm.gradeName}</span>
+                    <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20">
+                      POS: {hoseForm.genericCode}
+                    </Badge>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground flex gap-3 font-mono pt-0.5">
+                    <span>Tanque: <strong className="text-foreground">{hoseForm.tankId ? `T-${hoseForm.tankId}` : '-'}</strong></span>
+                    <span>Grado #: <strong className="text-foreground">{hoseForm.gradeId}</strong></span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="genericCode" className="text-xs font-medium">Código del Producto en el POS *</Label>
-                <Input
-                  id="genericCode"
-                  placeholder="Ej. SUPER"
-                  value={hoseForm.genericCode}
-                  onChange={(e) => setHoseForm({ ...hoseForm, genericCode: e.target.value.toUpperCase().trim() })}
-                  required
-                />
-                <p className="text-[11px] text-muted-foreground">Código en catálogo POS (SUPER, REGULAR, DIESEL)</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="gradeId" className="text-xs font-medium">Número de Grado (Controlador) *</Label>
-                <Input
-                  id="gradeId"
-                  type="number"
-                  min="1"
-                  max="10"
-                  placeholder="1"
-                  value={hoseForm.gradeId}
-                  onChange={(e) => setHoseForm({ ...hoseForm, gradeId: parseInt(e.target.value, 10) || 1 })}
-                  required
-                />
-                <p className="text-[11px] text-muted-foreground">ID del grado en Fusion (1, 2, 3...)</p>
-              </div>
-
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="tankId" className="text-xs font-medium">Tanque Asociado</Label>
-                <Input
-                  id="tankId"
-                  placeholder="Ej. 1, 2 o T-1 (Opcional)"
-                  value={hoseForm.tankId}
-                  onChange={(e) => setHoseForm({ ...hoseForm, tankId: e.target.value })}
-                />
-                <p className="text-[11px] text-muted-foreground">Identificador de tanque de almacenamiento subterráneo (opcional).</p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
@@ -1936,6 +2042,84 @@ export const StoresPage: React.FC = () => {
               {deletingHose ? 'Eliminando...' : 'Eliminar'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit Catalog Product Dialog */}
+      <Dialog open={catalogModalOpen} onOpenChange={setCatalogModalOpen}>
+        <DialogContent className="sm:max-w-md z-[75]">
+          <form onSubmit={handleSaveCatalogProduct}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Fuel className="w-5 h-5 text-primary" />
+                {editingCatalogProd ? 'Editar Producto del Catálogo' : 'Agregar Producto al Catálogo'}
+              </DialogTitle>
+              <DialogDescription>
+                Configure la descripción, código en el catálogo del POS y número de tanque para este combustible.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cat-gradeName" className="text-xs font-medium">Descripción del Producto / Combustible *</Label>
+                <Input
+                  id="cat-gradeName"
+                  placeholder="Ej. GASOLINA SUPERIOR 95"
+                  value={catalogForm.gradeName}
+                  onChange={(e) => setCatalogForm({ ...catalogForm, gradeName: e.target.value.toUpperCase() })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cat-genericCode" className="text-xs font-medium">Código POS *</Label>
+                  <Input
+                    id="cat-genericCode"
+                    placeholder="Ej. SUPER"
+                    value={catalogForm.genericCode}
+                    onChange={(e) => setCatalogForm({ ...catalogForm, genericCode: e.target.value.toUpperCase().trim() })}
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground">Código en catálogo POS</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="cat-tankId" className="text-xs font-medium">Tanque Asociado *</Label>
+                  <Input
+                    id="cat-tankId"
+                    placeholder="Ej. 1"
+                    value={catalogForm.tankId}
+                    onChange={(e) => setCatalogForm({ ...catalogForm, tankId: e.target.value })}
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground">ID Tanque (1, 2, 3...)</p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="cat-gradeId" className="text-xs font-medium">Número de Grado (Controlador Fusion)</Label>
+                <Input
+                  id="cat-gradeId"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={catalogForm.gradeId}
+                  onChange={(e) => setCatalogForm({ ...catalogForm, gradeId: parseInt(e.target.value, 10) || 1 })}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => setCatalogModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {editingCatalogProd ? 'Guardar Cambios' : 'Agregar al Catálogo'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
+import { FuelProduct, DEFAULT_FUEL_PRODUCTS } from '@/lib/fuelProducts';
 
 interface Hose {
   id: string;
@@ -58,6 +59,10 @@ export function HosePrices() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [hoseToDelete, setHoseToDelete] = useState<Hose | null>(null);
   const [deletingHose, setDeletingHose] = useState(false);
+
+  // Catalog state
+  const [catalogProducts] = useState<FuelProduct[]>(DEFAULT_FUEL_PRODUCTS);
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string>('1');
 
   const fetchHoses = useCallback(async () => {
     if (!selectedStore?.code) return;
@@ -124,14 +129,16 @@ export function HosePrices() {
         nextHose = maxHoseInPump + 1;
       }
     }
+    const firstProd = catalogProducts[0] || DEFAULT_FUEL_PRODUCTS[0];
+    setSelectedCatalogId(firstProd.id);
     setEditingHose(null);
     setHoseForm({
       pumpId: nextPump,
       hoseId: nextHose,
-      gradeName: 'GASOLINA SUPERIOR',
-      genericCode: 'SUPER',
-      gradeId: 1,
-      tankId: String(nextHose),
+      gradeName: firstProd.gradeName,
+      genericCode: firstProd.genericCode,
+      gradeId: firstProd.gradeId,
+      tankId: firstProd.tankId,
       unitPrice: '',
       active: true,
     });
@@ -139,14 +146,18 @@ export function HosePrices() {
   };
 
   const handleOpenEditHose = (hose: Hose) => {
+    const matched = catalogProducts.find(
+      (p) => p.genericCode === (hose.genericCode || hose.posCode) || p.gradeName === (hose.fuelGradeName || hose.productName || hose.gradeName),
+    ) || catalogProducts[0] || DEFAULT_FUEL_PRODUCTS[0];
+    setSelectedCatalogId(matched?.id || '');
     setEditingHose(hose);
     setHoseForm({
       pumpId: hose.pumpId,
       hoseId: hose.hoseId,
-      gradeName: hose.gradeName || hose.fuelGradeName || hose.productName || 'GASOLINA SUPERIOR',
-      genericCode: hose.genericCode || hose.posCode || 'SUPER',
-      gradeId: hose.gradeId || 1,
-      tankId: hose.tankId ? String(hose.tankId) : '',
+      gradeName: hose.gradeName || hose.fuelGradeName || hose.productName || matched.gradeName,
+      genericCode: hose.genericCode || hose.posCode || matched.genericCode,
+      gradeId: hose.gradeId || matched.gradeId,
+      tankId: hose.tankId ? String(hose.tankId) : matched.tankId,
       unitPrice: hose.unitPrice != null ? String(hose.unitPrice) : '',
       active: hose.active ?? true,
     });
@@ -462,70 +473,46 @@ export function HosePrices() {
 
               <div className="col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="h-gradeName" className="text-xs font-medium">Nombre del Producto / Combustible *</Label>
-                  <span className="text-[10px] text-muted-foreground">Presets rápidos abajo</span>
+                  <Label htmlFor="h-selectCatalog" className="text-xs font-medium">Producto / Combustible Asignado *</Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">Seleccionado del catálogo</span>
                 </div>
-                <Input
-                  id="h-gradeName"
-                  placeholder="Ej. GASOLINA SUPERIOR"
-                  value={hoseForm.gradeName}
-                  onChange={(e) => setHoseForm({ ...hoseForm, gradeName: e.target.value.toUpperCase() })}
-                  required
-                />
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    { label: 'Súper', name: 'GASOLINA SUPERIOR', code: 'SUPER', gradeId: 1 },
-                    { label: 'Regular', name: 'GASOLINA REGULAR', code: 'REGULAR', gradeId: 2 },
-                    { label: 'Diésel', name: 'DIESEL 50PPM', code: 'DIESEL', gradeId: 3 },
-                    { label: 'Kerosene', name: 'KEROSENE', code: 'KEROSENE', gradeId: 4 },
-                    { label: 'GLP', name: 'GLP', code: 'GLP', gradeId: 5 },
-                  ].map((p) => (
-                    <button
-                      key={p.code}
-                      type="button"
-                      onClick={() => setHoseForm({
+                <select
+                  id="h-selectCatalog"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={selectedCatalogId}
+                  onChange={(e) => {
+                    const prod = catalogProducts.find((p) => p.id === e.target.value);
+                    if (prod) {
+                      setSelectedCatalogId(prod.id);
+                      setHoseForm({
                         ...hoseForm,
-                        gradeName: p.name,
-                        genericCode: p.code,
-                        gradeId: p.gradeId,
-                      })}
-                      className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                        hoseForm.genericCode === p.code
-                          ? 'bg-primary text-primary-foreground border-primary font-medium'
-                          : 'bg-muted/40 hover:bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      + {p.label} ({p.code})
-                    </button>
+                        gradeName: prod.gradeName,
+                        genericCode: prod.genericCode,
+                        gradeId: prod.gradeId,
+                        tankId: prod.tankId,
+                      });
+                    }
+                  }}
+                >
+                  {catalogProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.gradeName} — ({p.genericCode} | Tanque {p.tankId ? `T-${p.tankId}` : '-'})
+                    </option>
                   ))}
+                </select>
+
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs flex flex-col gap-1 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">{hoseForm.gradeName}</span>
+                    <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
+                      POS: {hoseForm.genericCode}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground flex gap-3 font-mono pt-0.5">
+                    <span>Tanque: <strong className="text-foreground">{hoseForm.tankId ? `T-${hoseForm.tankId}` : '-'}</strong></span>
+                    <span>Grado #: <strong className="text-foreground">{hoseForm.gradeId}</strong></span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="h-genericCode" className="text-xs font-medium">Código del Producto en el POS *</Label>
-                <Input
-                  id="h-genericCode"
-                  placeholder="Ej. SUPER"
-                  value={hoseForm.genericCode}
-                  onChange={(e) => setHoseForm({ ...hoseForm, genericCode: e.target.value.toUpperCase().trim() })}
-                  required
-                />
-                <p className="text-[11px] text-muted-foreground">Código en catálogo POS (SUPER, REGULAR, DIESEL)</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="h-gradeId" className="text-xs font-medium">Número de Grado (Controlador) *</Label>
-                <Input
-                  id="h-gradeId"
-                  type="number"
-                  min="1"
-                  max="10"
-                  placeholder="1"
-                  value={hoseForm.gradeId}
-                  onChange={(e) => setHoseForm({ ...hoseForm, gradeId: parseInt(e.target.value, 10) || 1 })}
-                  required
-                />
-                <p className="text-[11px] text-muted-foreground">ID del grado en Fusion (1, 2, 3...)</p>
               </div>
 
               <div className="space-y-1.5">
