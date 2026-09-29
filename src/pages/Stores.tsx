@@ -222,6 +222,7 @@ export const StoresPage: React.FC = () => {
     RTN: '',
     address: '',
     ip: '127.0.0.1',
+    apiUrl: 'http://127.0.0.1:5012/api',
     dbPort: 5432,
     dbName: 'prisma',
     dbUser: 'postgres',
@@ -453,6 +454,7 @@ export const StoresPage: React.FC = () => {
       RTN: '',
       address: '',
       ip: '127.0.0.1',
+      apiUrl: 'http://127.0.0.1:5012/api',
       dbPort: 5432,
       dbName: 'prisma',
       dbUser: 'postgres',
@@ -528,6 +530,7 @@ export const StoresPage: React.FC = () => {
       correo: store.correo || '',
       moneda: store.moneda || 'HNL',
       codigoMoneda: store.codigoMoneda || 'HNL',
+      apiUrl: store.apiUrl || 'http://127.0.0.1:5012/api',
       dbPort: store.dbPort || 5432,
       dbName: store.dbName || 'prisma',
       dbUser: store.dbUser || 'postgres',
@@ -1766,33 +1769,39 @@ export const StoresPage: React.FC = () => {
               </div>
             )}
 
-            {/* TAB: TPV CONNECTION */}
+            {/* TAB: TPV CONNECTION (100% CLOUD HTTPS SYNC) */}
             {activeTab === 'db' && (
               <div className="space-y-4 py-4">
                 <div className="text-xs text-muted-foreground bg-primary/5 p-3.5 rounded-lg border border-primary/20 space-y-1">
                   <div className="font-semibold text-foreground flex items-center gap-1.5">
                     <Server className="w-4 h-4 text-primary" />
-                    Enlace de Comunicación con el TPV Local
+                    Conexión Cloud & Sincronización TPV
                   </div>
                   <div>
-                    Configura el endpoint del backend del TPV y la clave de autenticación única (Key UUID).
-                    Esta clave vincula de forma segura la base de datos y transacciones de la terminal con el Backoffice Cloud.
+                    En la arquitectura Cloud, la base de datos local del TPV se mantiene aislada y segura. Configura aquí la URL del servicio HTTP local/túnel del TPV y la clave UUID de autenticación para la sincronización automática.
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                   {/* Endpoint Backend TPV */}
                   <div className="col-span-full space-y-1.5">
-                    <Label htmlFor="ip" className="text-xs font-medium">Endpoint / URL del Backend TPV *</Label>
+                    <Label htmlFor="apiUrl" className="text-xs font-medium">Endpoint / URL del Backend TPV (Cloud / Túnel) *</Label>
                     <Input
-                      id="ip"
-                      placeholder="Ej. http://192.168.1.50:5012 o https://tpv-estacion01.mitunel.com"
-                      value={form.ip || ''}
-                      onChange={(e) => setForm({ ...form, ip: e.target.value })}
+                      id="apiUrl"
+                      placeholder="Ej. https://tpv-estacion01.mitunel.com/api o http://192.168.1.50:5012/api"
+                      value={form.apiUrl || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm({
+                          ...form,
+                          apiUrl: val,
+                          ip: val ? (val.startsWith('http') ? 'cloudflared' : val) : 'cloudflared',
+                        });
+                      }}
                       required
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Dirección IP o URL pública/túnel donde responde el servicio backend local del TPV.
+                      Dirección URL pública o túnel Cloudflare donde responde la API backend del TPV.
                     </p>
                   </div>
 
@@ -1851,7 +1860,7 @@ export const StoresPage: React.FC = () => {
                   </div>
 
                   {/* Intervalo Auto-Sync */}
-                  <div className="space-y-1.5">
+                  <div className="col-span-full md:col-span-1 space-y-1.5">
                     <Label htmlFor="syncMinutes" className="text-xs font-medium">Intervalo de Sincronización (minutos)</Label>
                     <Input
                       id="syncMinutes"
