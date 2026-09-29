@@ -19,17 +19,12 @@ import {
   Cpu,
   Sliders,
   Fuel,
-  Check,
-  Pencil,
-  X,
   Store,
   Lock,
   Key,
   Copy,
   Eye,
   EyeOff,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -120,7 +115,6 @@ export const StoresPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<StoreItem | null>(null);
-  const [testingConnection, setTestingConnection] = useState(false);
   const [syncingStore, setSyncingStore] = useState<string | null>(null);
   const [pingingStore, setPingingStore] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -132,11 +126,8 @@ export const StoresPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'wayne' | 'pos' | 'hoses' | 'db'>('general');
   const [showControllerKey, setShowControllerKey] = useState(false);
   const [showTpvKey, setShowTpvKey] = useState(false);
-  const [showAdvancedDb, setShowAdvancedDb] = useState(false);
   const [storeHoses, setStoreHoses] = useState<any[]>([]);
   const [loadingHoses, setLoadingHoses] = useState<boolean>(false);
-  const [editingHoseId, setEditingHoseId] = useState<string | null>(null);
-  const [editHosePrice, setEditHosePrice] = useState<string>('');
 
   // Hose modal state
   const [hoseModalOpen, setHoseModalOpen] = useState(false);
@@ -147,7 +138,6 @@ export const StoresPage: React.FC = () => {
     hoseId: 1,
     gradeName: 'GASOLINA SUPERIOR',
     tankId: '1',
-    unitPrice: '',
     active: true,
   });
   const [deleteHoseModalOpen, setDeleteHoseModalOpen] = useState(false);
@@ -219,24 +209,6 @@ export const StoresPage: React.FC = () => {
     }
   };
 
-  const handleSaveHosePrice = async (hoseId: string) => {
-    const price = parseFloat(editHosePrice);
-    if (isNaN(price) || price < 0) {
-      toast.error('Ingrese un precio válido');
-      return;
-    }
-    try {
-      await api.patch(`/hoses/${hoseId}/price`, { unitPrice: price });
-      toast.success('Precio de combustible actualizado');
-      setEditingHoseId(null);
-      if (form.code) {
-        await loadStoreHoses(form.code);
-      }
-    } catch (err: any) {
-      toast.error('Error al actualizar precio: ' + (err.response?.data?.message || err.message));
-    }
-  };
-
   const handleOpenAddHose = () => {
     let nextPump = 1;
     let nextHose = 1;
@@ -258,7 +230,6 @@ export const StoresPage: React.FC = () => {
       hoseId: nextHose,
       gradeName: 'GASOLINA SUPERIOR',
       tankId: String(nextHose),
-      unitPrice: '',
       active: true,
     });
     setHoseModalOpen(true);
@@ -271,7 +242,6 @@ export const StoresPage: React.FC = () => {
       hoseId: hose.hoseId ?? hose.hoseNumber ?? 1,
       gradeName: hose.fuelGradeName || hose.productName || hose.gradeName || 'GASOLINA SUPERIOR',
       tankId: hose.tankId ? String(hose.tankId) : '',
-      unitPrice: hose.unitPrice != null ? String(hose.unitPrice) : '',
       active: hose.active ?? true,
     });
     setHoseModalOpen(true);
@@ -309,12 +279,6 @@ export const StoresPage: React.FC = () => {
         tankId: hoseForm.tankId ? String(hoseForm.tankId).trim() : null,
         active: Boolean(hoseForm.active),
       };
-      if (hoseForm.unitPrice !== '') {
-        const price = parseFloat(String(hoseForm.unitPrice));
-        if (!isNaN(price) && price >= 0) {
-          payload.unitPrice = price;
-        }
-      }
 
       if (editingHose?.id) {
         await api.patch(`/hoses/${editingHose.id}`, payload, {
@@ -460,7 +424,6 @@ export const StoresPage: React.FC = () => {
     setActiveTab('general');
     setShowControllerKey(false);
     setShowTpvKey(false);
-    setShowAdvancedDb(false);
     setStoreHoses([]);
     setModalOpen(true);
   };
@@ -498,7 +461,6 @@ export const StoresPage: React.FC = () => {
     setActiveTab('general');
     setShowControllerKey(false);
     setShowTpvKey(false);
-    setShowAdvancedDb(false);
     setModalOpen(true);
     if (store.code) {
       loadStoreHoses(store.code);
@@ -559,28 +521,6 @@ export const StoresPage: React.FC = () => {
     }
   };
 
-  const handleTestConnection = async () => {
-    setTestingConnection(true);
-    try {
-      const res = await api.post('/stores/test-connection', {
-        ip: form.ip,
-        dbPort: form.dbPort,
-        dbName: form.dbName,
-        dbUser: form.dbUser,
-        dbPassword: form.dbPassword,
-        dbSsl: form.dbSsl,
-      });
-      if (res.data?.success) {
-        toast.success('¡Conexión exitosa a PostgreSQL!');
-      } else {
-        toast.error('Fallo de conexión: ' + (res.data?.error || 'No se pudo conectar'));
-      }
-    } catch (err: any) {
-      toast.error('Error al probar conexión: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setTestingConnection(false);
-    }
-  };
 
   const handlePing = async (store: StoreItem) => {
     setPingingStore(store.id);
@@ -1268,35 +1208,14 @@ export const StoresPage: React.FC = () => {
                       </div>
 
                       <div className="col-span-full space-y-1.5">
-                        <Label htmlFor="address" className="text-xs font-medium">Dirección Física de la Estación</Label>
+                        <Label htmlFor="address" className="text-xs font-medium">Dirección Física de la Pista / Estación</Label>
                         <Input
                           id="address"
                           placeholder="Ej. Barrio El Recreo, Boulevard del Norte, Tegucigalpa"
                           value={form.address || ''}
                           onChange={(e) => setForm({ ...form, address: e.target.value })}
                         />
-                        <p className="text-[11px] text-muted-foreground">Ubicación física de la pista o tienda.</p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="telefono" className="text-xs font-medium">Teléfono de la Estación</Label>
-                        <Input
-                          id="telefono"
-                          placeholder="Ej. +504 2234-5678"
-                          value={form.telefono || ''}
-                          onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="correo" className="text-xs font-medium">Correo Electrónico de la Estación</Label>
-                        <Input
-                          id="correo"
-                          type="email"
-                          placeholder="Ej. estacion01@empresa.com"
-                          value={form.correo || ''}
-                          onChange={(e) => setForm({ ...form, correo: e.target.value })}
-                        />
+                        <p className="text-[11px] text-muted-foreground">Ubicación física local de la pista o tienda.</p>
                       </div>
 
                       <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
@@ -1340,36 +1259,36 @@ export const StoresPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* SECCIÓN 2: INFORMACIÓN DE CASA MATRIZ (HEREDADA - SOLO LECTURA) */}
+                  {/* SECCIÓN 2: INFORMACIÓN DE LA EMPRESA (HEREDADA DE CASA MATRIZ 000 - NO EDITABLE) */}
                   <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-amber-600" />
                         <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                          2. Información Corporativa (Heredada de Casa Matriz 000)
+                          2. Datos de la Empresa (Heredados de Casa Matriz 000)
                         </span>
                       </div>
                       <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 text-[10px] font-medium flex items-center gap-1">
                         <Lock className="w-2.5 h-2.5" />
-                        Solo Lectura
+                        Solo Lectura / Heredado
                       </Badge>
                     </div>
 
                     <p className="text-[11px] text-amber-800/80">
-                      Esta tienda hereda automáticamente los datos fiscales y comerciales de la <strong>Casa Matriz ({hqStore?.name || '000'})</strong>.
-                      Estos datos se imprimen en comprobantes fiscales y facturas. Para modificarlos, edite la Casa Matriz directamente.
+                      Esta tienda hereda automáticamente la información fiscal y corporativa definida en la <strong>Casa Matriz ({hqStore?.name || '000'})</strong>.
+                      Estos valores se aplican a todas las facturas y comprobantes emitidos. Para modificarlos, edite la Casa Matriz (000).
                     </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
                       <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
-                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Razón Social / Emisor</span>
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Razón Social / Emisor Legal</span>
                         <span className="text-xs font-semibold text-foreground truncate block mt-0.5" title={hqStore?.emisor || hqStore?.name}>
                           {hqStore?.emisor || hqStore?.name || 'No configurado en Matriz'}
                         </span>
                       </div>
 
                       <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
-                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">RTN Corporativo</span>
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">RTN de la Empresa</span>
                         <span className="text-xs font-mono font-bold text-foreground block mt-0.5">
                           {hqStore?.RTN || 'No configurado en Matriz'}
                         </span>
@@ -1383,16 +1302,30 @@ export const StoresPage: React.FC = () => {
                       </div>
 
                       <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
-                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Moneda de Facturación</span>
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Moneda Base</span>
                         <span className="text-xs font-mono font-bold text-foreground block mt-0.5">
                           {hqStore?.moneda || 'HNL'}
                         </span>
                       </div>
 
-                      <div className="sm:col-span-2 p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
-                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Dirección Fiscal Matriz</span>
+                      <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Teléfono Corporativo</span>
+                        <span className="text-xs font-medium text-foreground truncate block mt-0.5">
+                          {hqStore?.telefono || 'No configurado en Matriz'}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Correo Corporativo</span>
+                        <span className="text-xs font-medium text-foreground truncate block mt-0.5">
+                          {hqStore?.correo || 'No configurado en Matriz'}
+                        </span>
+                      </div>
+
+                      <div className="sm:col-span-3 p-2.5 bg-background/90 rounded-lg border border-amber-500/20">
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Dirección Fiscal Corporativa</span>
                         <span className="text-xs text-muted-foreground truncate block mt-0.5">
-                          {hqStore?.address || 'No configurada'}
+                          {hqStore?.address || 'No configurada en Matriz'}
                         </span>
                       </div>
                     </div>
@@ -1605,21 +1538,20 @@ export const StoresPage: React.FC = () => {
                         <tr>
                           <th className="py-2.5 px-3 text-left font-semibold">Bomba</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Manguera</th>
-                          <th className="py-2.5 px-3 text-left font-semibold">Combustible</th>
+                          <th className="py-2.5 px-3 text-left font-semibold">Combustible / Producto</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Tanque</th>
-                          <th className="py-2.5 px-3 text-right font-semibold">Precio Unit. (L.)</th>
                           <th className="py-2.5 px-3 text-center font-semibold">Estado</th>
-                          <th className="py-2.5 px-3 text-center font-semibold w-28">Acciones</th>
+                          <th className="py-2.5 px-3 text-center font-semibold w-24">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {storeHoses.map((h: any) => (
                           <tr key={h.id} className="hover:bg-muted/20">
-                            <td className="py-2 px-3 font-mono font-medium">Bomba {h.pumpNumber ?? h.pumpId}</td>
-                            <td className="py-2 px-3 font-mono">#{h.hoseNumber ?? h.hoseId}</td>
-                            <td className="py-2 px-3">
+                            <td className="py-2.5 px-3 font-mono font-medium">Bomba {h.pumpNumber ?? h.pumpId}</td>
+                            <td className="py-2.5 px-3 font-mono">#{h.hoseNumber ?? h.hoseId}</td>
+                            <td className="py-2.5 px-3">
                               <span className="inline-flex items-center gap-1.5 font-medium">
-                                <span className={`w-2 h-2 rounded-full ${
+                                <span className={`w-2.5 h-2.5 rounded-full ${
                                   (h.fuelGradeName || h.productName || '').includes('SUPERIOR')
                                     ? 'bg-rose-500'
                                     : (h.fuelGradeName || h.productName || '').includes('REGULAR')
@@ -1631,27 +1563,9 @@ export const StoresPage: React.FC = () => {
                                 {h.fuelGradeName || h.productName || 'Combustible'}
                               </span>
                             </td>
-                            <td className="py-2 px-3 font-mono text-muted-foreground">{h.tankId ? `T-${h.tankId}` : '-'}</td>
-                            <td className="py-2 px-3 text-right font-mono font-bold">
-                              {editingHoseId === h.id ? (
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={editHosePrice}
-                                  onChange={(e) => setEditHosePrice(e.target.value)}
-                                  className="h-7 w-24 text-right inline-block font-mono text-xs"
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveHosePrice(h.id);
-                                    if (e.key === 'Escape') setEditingHoseId(null);
-                                  }}
-                                />
-                              ) : (
-                                `L. ${Number(h.unitPrice ?? h.price ?? 0).toFixed(2)}`
-                              )}
-                            </td>
-                            <td className="py-2 px-3 text-center">
-                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            <td className="py-2.5 px-3 font-mono text-muted-foreground">{h.tankId ? `T-${h.tankId}` : '-'}</td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${
                                 h.active !== false
                                   ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                                   : 'bg-muted text-muted-foreground border border-border'
@@ -1659,70 +1573,32 @@ export const StoresPage: React.FC = () => {
                                 {h.active !== false ? 'Activa' : 'Inactiva'}
                               </span>
                             </td>
-                            <td className="py-2 px-3 text-center">
-                              {editingHoseId === h.id ? (
-                                <div className="flex items-center justify-center gap-1">
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
-                                    onClick={() => handleSaveHosePrice(h.id)}
-                                    title="Guardar precio"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-muted-foreground hover:bg-muted"
-                                    onClick={() => setEditingHoseId(null)}
-                                    title="Cancelar"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-1">
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                    onClick={() => {
-                                      setEditingHoseId(h.id);
-                                      setEditHosePrice(String(h.unitPrice ?? h.price ?? 0));
-                                    }}
-                                    title="Editar precio rápido"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                    onClick={() => handleOpenEditHose(h)}
-                                    title="Editar configuración completa"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                    onClick={() => {
-                                      setHoseToDelete(h);
-                                      setDeleteHoseModalOpen(true);
-                                    }}
-                                    title="Eliminar manguera"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              )}
+                            <td className="py-2.5 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                  onClick={() => handleOpenEditHose(h)}
+                                  title="Editar manguera"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    setHoseToDelete(h);
+                                    setDeleteHoseModalOpen(true);
+                                  }}
+                                  title="Eliminar manguera"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1833,73 +1709,6 @@ export const StoresPage: React.FC = () => {
                       Frecuencia automática con la que el TPV envía ventas y estado al Backoffice.
                     </p>
                   </div>
-                </div>
-
-                {/* Sección Desplegable: Parámetros Avanzados PostgreSQL */}
-                <div className="pt-2 border-t border-border/40">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedDb(!showAdvancedDb)}
-                    className="flex items-center justify-between w-full py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Database className="w-3.5 h-3.5 text-muted-foreground" />
-                      Opciones avanzadas: Acceso directo PostgreSQL (Opcional para ETL directo)
-                    </span>
-                    {showAdvancedDb ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-
-                  {showAdvancedDb && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 p-3 bg-muted/20 rounded-lg border border-border/40 mt-1">
-                      <div className="space-y-1">
-                        <Label htmlFor="dbPort" className="text-[11px] font-medium">Puerto PostgreSQL</Label>
-                        <Input
-                          id="dbPort"
-                          type="number"
-                          placeholder="5432"
-                          value={form.dbPort || 5432}
-                          onChange={(e) => setForm({ ...form, dbPort: parseInt(e.target.value, 10) || 5432 })}
-                          className="h-8 text-xs font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label htmlFor="dbName" className="text-[11px] font-medium">Base de Datos</Label>
-                        <Input
-                          id="dbName"
-                          placeholder="prisma"
-                          value={form.dbName || ''}
-                          onChange={(e) => setForm({ ...form, dbName: e.target.value })}
-                          className="h-8 text-xs font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label htmlFor="dbUser" className="text-[11px] font-medium">Usuario DB</Label>
-                        <Input
-                          id="dbUser"
-                          placeholder="postgres"
-                          value={form.dbUser || ''}
-                          onChange={(e) => setForm({ ...form, dbUser: e.target.value })}
-                          className="h-8 text-xs font-mono"
-                        />
-                      </div>
-
-                      <div className="col-span-full pt-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleTestConnection}
-                          disabled={testingConnection}
-                          className="gap-2 text-xs h-8"
-                        >
-                          <Database className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin' : ''}`} />
-                          {testingConnection ? 'Probando conexión...' : 'Probar Conexión PostgreSQL'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -2021,29 +1830,15 @@ export const StoresPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="tankId" className="text-xs font-medium">Tanque Asociado</Label>
                 <Input
                   id="tankId"
-                  placeholder="1"
+                  placeholder="Ej. 1, 2 o T-1 (Opcional)"
                   value={hoseForm.tankId}
                   onChange={(e) => setHoseForm({ ...hoseForm, tankId: e.target.value })}
                 />
-                <p className="text-[11px] text-muted-foreground">Ej. 1, 2, o T-1 (Opcional)</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="unitPrice" className="text-xs font-medium">Precio por Galón (L.)</Label>
-                <Input
-                  id="unitPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={hoseForm.unitPrice}
-                  onChange={(e) => setHoseForm({ ...hoseForm, unitPrice: e.target.value })}
-                />
-                <p className="text-[11px] text-muted-foreground">Precio en Lempiras</p>
+                <p className="text-[11px] text-muted-foreground">Identificador de tanque de almacenamiento subterráneo (opcional).</p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
