@@ -137,6 +137,8 @@ export const StoresPage: React.FC = () => {
     pumpId: 1,
     hoseId: 1,
     gradeName: 'GASOLINA SUPERIOR',
+    genericCode: 'SUPER',
+    gradeId: 1,
     tankId: '1',
     active: true,
   });
@@ -229,6 +231,8 @@ export const StoresPage: React.FC = () => {
       pumpId: nextPump,
       hoseId: nextHose,
       gradeName: 'GASOLINA SUPERIOR',
+      genericCode: 'SUPER',
+      gradeId: 1,
       tankId: String(nextHose),
       active: true,
     });
@@ -241,6 +245,8 @@ export const StoresPage: React.FC = () => {
       pumpId: hose.pumpId ?? hose.pumpNumber ?? 1,
       hoseId: hose.hoseId ?? hose.hoseNumber ?? 1,
       gradeName: hose.fuelGradeName || hose.productName || hose.gradeName || 'GASOLINA SUPERIOR',
+      genericCode: hose.genericCode || hose.posCode || 'SUPER',
+      gradeId: hose.gradeId || 1,
       tankId: hose.tankId ? String(hose.tankId) : '',
       active: hose.active ?? true,
     });
@@ -271,11 +277,15 @@ export const StoresPage: React.FC = () => {
 
     setSavingHose(true);
     try {
+      const genericCode = (hoseForm.genericCode || 'SUPER').trim().toUpperCase();
       const payload: any = {
         storeCode,
         pumpId,
         hoseId,
         gradeName: hoseForm.gradeName.trim(),
+        genericCode,
+        posCode: genericCode,
+        gradeId: Number(hoseForm.gradeId) || 1,
         tankId: hoseForm.tankId ? String(hoseForm.tankId).trim() : null,
         active: Boolean(hoseForm.active),
       };
@@ -1539,6 +1549,7 @@ export const StoresPage: React.FC = () => {
                           <th className="py-2.5 px-3 text-left font-semibold">Bomba</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Manguera</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Combustible / Producto</th>
+                          <th className="py-2.5 px-3 text-left font-semibold">Código POS</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Tanque</th>
                           <th className="py-2.5 px-3 text-center font-semibold">Estado</th>
                           <th className="py-2.5 px-3 text-center font-semibold w-24">Acciones</th>
@@ -1561,6 +1572,11 @@ export const StoresPage: React.FC = () => {
                                     : 'bg-primary'
                                 }`} />
                                 {h.fuelGradeName || h.productName || 'Combustible'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="font-mono px-2 py-0.5 rounded bg-muted/60 text-foreground font-semibold text-[11px]">
+                                {h.genericCode || h.posCode || '-'}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 font-mono text-muted-foreground">{h.tankId ? `T-${h.tankId}` : '-'}</td>
@@ -1795,39 +1811,71 @@ export const StoresPage: React.FC = () => {
               </div>
 
               <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="gradeName" className="text-xs font-medium">Combustible / Producto *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="gradeName" className="text-xs font-medium">Nombre del Producto / Combustible *</Label>
+                  <span className="text-[10px] text-muted-foreground">Presets rápidos abajo</span>
+                </div>
                 <Input
                   id="gradeName"
-                  list="store-fuel-grades-list"
-                  placeholder="Ej. GASOLINA SUPERIOR"
+                  placeholder="Ej. Gasolina Súper 95 Oct"
                   value={hoseForm.gradeName}
                   onChange={(e) => setHoseForm({ ...hoseForm, gradeName: e.target.value.toUpperCase() })}
                   required
                 />
-                <datalist id="store-fuel-grades-list">
-                  <option value="GASOLINA SUPERIOR" />
-                  <option value="GASOLINA REGULAR" />
-                  <option value="DIESEL 50PPM" />
-                  <option value="DIESEL" />
-                  <option value="KEROSENE" />
-                  <option value="GLP" />
-                </datalist>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {['GASOLINA SUPERIOR', 'GASOLINA REGULAR', 'DIESEL 50PPM', 'DIESEL', 'KEROSENE', 'GLP'].map((grade) => (
+                  {[
+                    { label: 'Súper', name: 'GASOLINA SUPERIOR', code: 'SUPER', gradeId: 1 },
+                    { label: 'Regular', name: 'GASOLINA REGULAR', code: 'REGULAR', gradeId: 2 },
+                    { label: 'Diésel', name: 'DIESEL 50PPM', code: 'DIESEL', gradeId: 3 },
+                    { label: 'Kerosene', name: 'KEROSENE', code: 'KEROSENE', gradeId: 4 },
+                    { label: 'GLP', name: 'GLP', code: 'GLP', gradeId: 5 },
+                  ].map((p) => (
                     <button
-                      key={grade}
+                      key={p.code}
                       type="button"
-                      onClick={() => setHoseForm({ ...hoseForm, gradeName: grade })}
+                      onClick={() => setHoseForm({
+                        ...hoseForm,
+                        gradeName: p.name,
+                        genericCode: p.code,
+                        gradeId: p.gradeId,
+                      })}
                       className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                        hoseForm.gradeName === grade
+                        hoseForm.genericCode === p.code
                           ? 'bg-primary text-primary-foreground border-primary font-medium'
                           : 'bg-muted/40 hover:bg-muted text-muted-foreground'
                       }`}
                     >
-                      {grade}
+                      + {p.label} ({p.code})
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="genericCode" className="text-xs font-medium">Código del Producto en el POS *</Label>
+                <Input
+                  id="genericCode"
+                  placeholder="Ej. SUPER"
+                  value={hoseForm.genericCode}
+                  onChange={(e) => setHoseForm({ ...hoseForm, genericCode: e.target.value.toUpperCase().trim() })}
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">Código en catálogo POS (SUPER, REGULAR, DIESEL)</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="gradeId" className="text-xs font-medium">Número de Grado (Controlador) *</Label>
+                <Input
+                  id="gradeId"
+                  type="number"
+                  min="1"
+                  max="10"
+                  placeholder="1"
+                  value={hoseForm.gradeId}
+                  onChange={(e) => setHoseForm({ ...hoseForm, gradeId: parseInt(e.target.value, 10) || 1 })}
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">ID del grado en Fusion (1, 2, 3...)</p>
               </div>
 
               <div className="col-span-2 space-y-1.5">

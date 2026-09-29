@@ -25,6 +25,9 @@ interface Hose {
   productName?: string;
   unitPrice: number | null;
   tankId?: string | null;
+  posCode?: string | null;
+  genericCode?: string | null;
+  gradeId?: number;
   active: boolean;
 }
 
@@ -44,6 +47,8 @@ export function HosePrices() {
     pumpId: 1,
     hoseId: 1,
     gradeName: 'GASOLINA SUPERIOR',
+    genericCode: 'SUPER',
+    gradeId: 1,
     tankId: '1',
     unitPrice: '',
     active: true,
@@ -124,6 +129,8 @@ export function HosePrices() {
       pumpId: nextPump,
       hoseId: nextHose,
       gradeName: 'GASOLINA SUPERIOR',
+      genericCode: 'SUPER',
+      gradeId: 1,
       tankId: String(nextHose),
       unitPrice: '',
       active: true,
@@ -137,6 +144,8 @@ export function HosePrices() {
       pumpId: hose.pumpId,
       hoseId: hose.hoseId,
       gradeName: hose.gradeName || hose.fuelGradeName || hose.productName || 'GASOLINA SUPERIOR',
+      genericCode: hose.genericCode || hose.posCode || 'SUPER',
+      gradeId: hose.gradeId || 1,
       tankId: hose.tankId ? String(hose.tankId) : '',
       unitPrice: hose.unitPrice != null ? String(hose.unitPrice) : '',
       active: hose.active ?? true,
@@ -167,11 +176,15 @@ export function HosePrices() {
 
     setSavingHose(true);
     try {
+      const genericCode = (hoseForm.genericCode || 'SUPER').trim().toUpperCase();
       const payload: any = {
         storeCode: selectedStore.code,
         pumpId,
         hoseId,
         gradeName: hoseForm.gradeName.trim(),
+        genericCode,
+        posCode: genericCode,
+        gradeId: Number(hoseForm.gradeId) || 1,
         tankId: hoseForm.tankId ? String(hoseForm.tankId).trim() : null,
         active: Boolean(hoseForm.active),
       };
@@ -275,8 +288,9 @@ export function HosePrices() {
             <div className="rounded-lg border bg-card overflow-hidden">
               <div className="grid grid-cols-12 gap-2 p-3 bg-muted/40 border-b text-xs font-bold uppercase text-muted-foreground items-center">
                 <div className="col-span-2">Bomba</div>
-                <div className="col-span-2">Manguera</div>
-                <div className="col-span-3">Combustible</div>
+                <div className="col-span-1">Manguera</div>
+                <div className="col-span-2">Combustible</div>
+                <div className="col-span-2">Código POS</div>
                 <div className="col-span-1">Tanque</div>
                 <div className="col-span-2 text-right">Precio Galón</div>
                 <div className="col-span-2 text-center">Acciones</div>
@@ -290,10 +304,10 @@ export function HosePrices() {
                         <span className="w-2 h-2 rounded-full bg-primary" />
                         Bomba {hose.pumpId}
                       </div>
-                      <div className="col-span-2 font-mono text-sm">
-                        <span className="text-muted-foreground">Posición</span> #{hose.hoseId}
+                      <div className="col-span-1 font-mono text-sm">
+                        #{hose.hoseId}
                       </div>
-                      <div className="col-span-3 text-sm font-medium truncate flex items-center gap-1.5">
+                      <div className="col-span-2 text-sm font-medium truncate flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${
                           gradeLabel.includes('SUPERIOR')
                             ? 'bg-rose-500'
@@ -304,6 +318,11 @@ export function HosePrices() {
                             : 'bg-primary'
                         }`} />
                         <span className="truncate">{gradeLabel}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted/60 text-foreground font-semibold">
+                          {hose.genericCode || hose.posCode || '-'}
+                        </span>
                       </div>
                       <div className="col-span-1 font-mono text-xs text-muted-foreground">
                         {hose.tankId ? `T-${hose.tankId}` : '-'}
@@ -442,39 +461,71 @@ export function HosePrices() {
               </div>
 
               <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="h-gradeName" className="text-xs font-medium">Combustible / Producto *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="h-gradeName" className="text-xs font-medium">Nombre del Producto / Combustible *</Label>
+                  <span className="text-[10px] text-muted-foreground">Presets rápidos abajo</span>
+                </div>
                 <Input
                   id="h-gradeName"
-                  list="h-fuel-grades-list"
                   placeholder="Ej. GASOLINA SUPERIOR"
                   value={hoseForm.gradeName}
                   onChange={(e) => setHoseForm({ ...hoseForm, gradeName: e.target.value.toUpperCase() })}
                   required
                 />
-                <datalist id="h-fuel-grades-list">
-                  <option value="GASOLINA SUPERIOR" />
-                  <option value="GASOLINA REGULAR" />
-                  <option value="DIESEL 50PPM" />
-                  <option value="DIESEL" />
-                  <option value="KEROSENE" />
-                  <option value="GLP" />
-                </datalist>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {['GASOLINA SUPERIOR', 'GASOLINA REGULAR', 'DIESEL 50PPM', 'DIESEL', 'KEROSENE', 'GLP'].map((grade) => (
+                  {[
+                    { label: 'Súper', name: 'GASOLINA SUPERIOR', code: 'SUPER', gradeId: 1 },
+                    { label: 'Regular', name: 'GASOLINA REGULAR', code: 'REGULAR', gradeId: 2 },
+                    { label: 'Diésel', name: 'DIESEL 50PPM', code: 'DIESEL', gradeId: 3 },
+                    { label: 'Kerosene', name: 'KEROSENE', code: 'KEROSENE', gradeId: 4 },
+                    { label: 'GLP', name: 'GLP', code: 'GLP', gradeId: 5 },
+                  ].map((p) => (
                     <button
-                      key={grade}
+                      key={p.code}
                       type="button"
-                      onClick={() => setHoseForm({ ...hoseForm, gradeName: grade })}
+                      onClick={() => setHoseForm({
+                        ...hoseForm,
+                        gradeName: p.name,
+                        genericCode: p.code,
+                        gradeId: p.gradeId,
+                      })}
                       className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                        hoseForm.gradeName === grade
+                        hoseForm.genericCode === p.code
                           ? 'bg-primary text-primary-foreground border-primary font-medium'
                           : 'bg-muted/40 hover:bg-muted text-muted-foreground'
                       }`}
                     >
-                      {grade}
+                      + {p.label} ({p.code})
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="h-genericCode" className="text-xs font-medium">Código del Producto en el POS *</Label>
+                <Input
+                  id="h-genericCode"
+                  placeholder="Ej. SUPER"
+                  value={hoseForm.genericCode}
+                  onChange={(e) => setHoseForm({ ...hoseForm, genericCode: e.target.value.toUpperCase().trim() })}
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">Código en catálogo POS (SUPER, REGULAR, DIESEL)</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="h-gradeId" className="text-xs font-medium">Número de Grado (Controlador) *</Label>
+                <Input
+                  id="h-gradeId"
+                  type="number"
+                  min="1"
+                  max="10"
+                  placeholder="1"
+                  value={hoseForm.gradeId}
+                  onChange={(e) => setHoseForm({ ...hoseForm, gradeId: parseInt(e.target.value, 10) || 1 })}
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">ID del grado en Fusion (1, 2, 3...)</p>
               </div>
 
               <div className="space-y-1.5">
