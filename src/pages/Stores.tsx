@@ -24,6 +24,12 @@ import {
   X,
   Store,
   Lock,
+  Key,
+  Copy,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -124,6 +130,9 @@ export const StoresPage: React.FC = () => {
   const canManageStores = isAdmin() || can('storesManage');
 
   const [activeTab, setActiveTab] = useState<'general' | 'wayne' | 'pos' | 'hoses' | 'db'>('general');
+  const [showControllerKey, setShowControllerKey] = useState(false);
+  const [showTpvKey, setShowTpvKey] = useState(false);
+  const [showAdvancedDb, setShowAdvancedDb] = useState(false);
   const [storeHoses, setStoreHoses] = useState<any[]>([]);
   const [loadingHoses, setLoadingHoses] = useState<boolean>(false);
   const [editingHoseId, setEditingHoseId] = useState<string | null>(null);
@@ -170,21 +179,30 @@ export const StoresPage: React.FC = () => {
     correo: '',
     posConfig: {
       codigoPos: '01',
-      pantallaEnBomba: false,
-      bloquearSoloPos: false,
-      mostrarVideoPublicidad: false,
-      reimprimirVarios: true,
-      facturarVariasLineas: true,
-      descuentoManual: true,
-      ocultarBotonOtrasBombas: false,
-      ocultarInformacionTurnos: false,
       mostrarBombas: true,
       numTransaccionesBombas: 400,
       minutosAtrasada: 60,
       mostrarTeclado: true,
       declararMontosIniciales: true,
+      ocultarBotonOtrasBombas: false,
     },
   });
+
+  const handleGenerateUuidKey = () => {
+    const newUuid = crypto.randomUUID();
+    setForm((prev) => ({ ...prev, dbPassword: newUuid }));
+    setShowTpvKey(true);
+    toast.success('Nueva Key UUID generada con éxito');
+  };
+
+  const handleCopyTpvKey = () => {
+    if (!form.dbPassword) {
+      toast.error('No hay ninguna clave para copiar');
+      return;
+    }
+    navigator.clipboard.writeText(form.dbPassword);
+    toast.success('Key copiada al portapapeles');
+  };
 
   const hqStore = stores.find((s) => s.code === '000') || null;
   const isEditingHQ = editingStore?.code === '000' || form.code === '000';
@@ -406,19 +424,12 @@ export const StoresPage: React.FC = () => {
       correo: '',
       posConfig: {
         codigoPos: '01',
-        pantallaEnBomba: false,
-        bloquearSoloPos: false,
-        mostrarVideoPublicidad: false,
-        reimprimirVarios: true,
-        facturarVariasLineas: true,
-        descuentoManual: true,
-        ocultarBotonOtrasBombas: false,
-        ocultarInformacionTurnos: false,
         mostrarBombas: true,
         numTransaccionesBombas: 400,
         minutosAtrasada: 60,
         mostrarTeclado: true,
         declararMontosIniciales: true,
+        ocultarBotonOtrasBombas: false,
       },
     });
     // Pre-llenar los campos de la empresa desde la casa matriz (000)
@@ -447,6 +458,9 @@ export const StoresPage: React.FC = () => {
       // sin HQ o error: se queda el form con defaults
     }
     setActiveTab('general');
+    setShowControllerKey(false);
+    setShowTpvKey(false);
+    setShowAdvancedDb(false);
     setStoreHoses([]);
     setModalOpen(true);
   };
@@ -473,22 +487,18 @@ export const StoresPage: React.FC = () => {
       SyncMinutes: store.SyncMinutes || 5,
       posConfig: store.posConfig || {
         codigoPos: '01',
-        pantallaEnBomba: false,
-        bloquearSoloPos: false,
-        mostrarVideoPublicidad: false,
-        reimprimirVarios: true,
-        facturarVariasLineas: true,
-        descuentoManual: true,
-        ocultarBotonOtrasBombas: false,
-        ocultarInformacionTurnos: false,
         mostrarBombas: true,
         numTransaccionesBombas: 400,
         minutosAtrasada: 60,
         mostrarTeclado: true,
         declararMontosIniciales: true,
+        ocultarBotonOtrasBombas: false,
       },
     });
     setActiveTab('general');
+    setShowControllerKey(false);
+    setShowTpvKey(false);
+    setShowAdvancedDb(false);
     setModalOpen(true);
     if (store.code) {
       loadStoreHoses(store.code);
@@ -1008,7 +1018,7 @@ export const StoresPage: React.FC = () => {
                 onClick={() => setActiveTab('wayne')}
               >
                 <Cpu className="w-3.5 h-3.5" />
-                Wayne Fusion
+                Controlador
               </Button>
               <Button
                 type="button"
@@ -1031,7 +1041,7 @@ export const StoresPage: React.FC = () => {
                 }}
               >
                 <Fuel className="w-3.5 h-3.5" />
-                Mangueras & Precios
+                Mangueras
               </Button>
               <Button
                 type="button"
@@ -1040,8 +1050,8 @@ export const StoresPage: React.FC = () => {
                 className="gap-1.5 text-xs h-8 shrink-0"
                 onClick={() => setActiveTab('db')}
               >
-                <Database className="w-3.5 h-3.5" />
-                Conexión BD
+                <Server className="w-3.5 h-3.5" />
+                Conexión TPV
               </Button>
             </div>
 
@@ -1391,60 +1401,52 @@ export const StoresPage: React.FC = () => {
               )
             )}
 
-            {/* TAB: WAYNE FUSION */}
+            {/* TAB: CONTROLADOR */}
             {activeTab === 'wayne' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                <div className="col-span-full text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/20">
-                  Parámetros de comunicación con el controlador Wayne Fusion en la pista local. La estación descargará estos parámetros automáticamente al iniciar.
+                <div className="col-span-full text-xs text-muted-foreground bg-primary/5 p-3.5 rounded-lg border border-primary/20 space-y-1">
+                  <div className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Cpu className="w-4 h-4 text-primary" />
+                    Microservicio Controlador de Bombas
+                  </div>
+                  <div>
+                    Parámetros de comunicación con el driver o microservicio controlador de pista (ej. Wayne Fusion).
+                    La terminal POS utilizará estos datos para enviar autorizaciones y recibir despachos de combustible.
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="ipFusion" className="text-xs font-medium">IP Wayne Fusion (Pista)</Label>
-                  <Input
-                    id="ipFusion"
-                    placeholder="192.168.10.51"
-                    value={form.ipFusion || ''}
-                    onChange={(e) => setForm({ ...form, ipFusion: e.target.value })}
-                  />
-                  <p className="text-[11px] text-muted-foreground">Dirección IP de la red local del controlador Wayne Fusion.</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="urlControlador" className="text-xs font-medium">URL Microservicio Controlador</Label>
+                  <Label htmlFor="urlControlador" className="text-xs font-medium">URL del Controlador *</Label>
                   <Input
                     id="urlControlador"
                     placeholder="http://localhost:5008"
                     value={form.urlControlador || ''}
                     onChange={(e) => setForm({ ...form, urlControlador: e.target.value })}
                   />
-                  <p className="text-[11px] text-muted-foreground">URL base del puente o driver de comunicación con bombas.</p>
+                  <p className="text-[11px] text-muted-foreground">URL base del microservicio puente de comunicación con las bombas.</p>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="claveControlador" className="text-xs font-medium">Clave / Token del Controlador</Label>
-                  <Input
-                    id="claveControlador"
-                    type="password"
-                    placeholder="Token o Clave Secreta"
-                    value={form.claveControlador || ''}
-                    onChange={(e) => setForm({ ...form, claveControlador: e.target.value })}
-                  />
-                  <p className="text-[11px] text-muted-foreground">Clave de autenticación para comandos directos al controlador.</p>
-                </div>
-
-                <div className="space-y-1.5 flex flex-col justify-end">
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border h-[62px]">
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-medium">Es Controlador Gas</div>
-                      <div className="text-[10px] text-muted-foreground">Activar si gestiona dispensadores de GLP</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={form.esControladorGas ?? false}
-                      onChange={(e) => setForm({ ...form, esControladorGas: e.target.checked })}
-                      className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                  <div className="relative">
+                    <Input
+                      id="claveControlador"
+                      type={showControllerKey ? 'text' : 'password'}
+                      placeholder="Token o Clave Secreta"
+                      value={form.claveControlador || ''}
+                      onChange={(e) => setForm({ ...form, claveControlador: e.target.value })}
+                      className="pr-10"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowControllerKey(!showControllerKey)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title={showControllerKey ? 'Ocultar clave' : 'Mostrar clave'}
+                    >
+                      {showControllerKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+                  <p className="text-[11px] text-muted-foreground">Clave de autenticación para enviar comandos directos al controlador.</p>
                 </div>
               </div>
             )}
@@ -1501,17 +1503,10 @@ export const StoresPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   {[
-                    { key: 'pantallaEnBomba', label: 'Pantalla en Bomba', desc: 'Permite seleccionar bomba directamente en pantalla' },
-                    { key: 'mostrarBombas', label: 'Mostrar Bombas', desc: 'Muestra el panel visual de dispensadores y mangueras' },
-                    { key: 'bloquearSoloPos', label: 'Bloquear Solo POS', desc: 'Restringe la máquina para ejecutar únicamente el POS' },
-                    { key: 'mostrarVideoPublicidad', label: 'Video de Publicidad', desc: 'Reproduce videos comerciales en modo reposo' },
-                    { key: 'mostrarTeclado', label: 'Teclado Táctil', desc: 'Despliega teclado en pantalla para terminales táctiles' },
-                    { key: 'reimprimirVarios', label: 'Reimpresión Múltiple', desc: 'Permite reimprimir comprobantes de venta' },
-                    { key: 'facturarVariasLineas', label: 'Facturar Múltiples Líneas', desc: 'Permite agregar lubricantes y otros ítems con combustible' },
-                    { key: 'descuentoManual', label: 'Descuento Manual', desc: 'Habilita al cajero aplicar descuentos manuales autorizados' },
+                    { key: 'mostrarBombas', label: 'Mostrar Bombas en Pantalla', desc: 'Visualiza el panel de dispensadores y mangueras en el POS' },
+                    { key: 'mostrarTeclado', label: 'Teclado Táctil en Pantalla', desc: 'Despliega el teclado en pantalla para terminales táctiles' },
                     { key: 'declararMontosIniciales', label: 'Declarar Fondos Iniciales', desc: 'Exige ingreso de fondo de caja al abrir turno' },
-                    { key: 'ocultarBotonOtrasBombas', label: 'Ocultar Otras Bombas', desc: 'Oculta botones de dispensadores ajenos al turno' },
-                    { key: 'ocultarInformacionTurnos', label: 'Ocultar Info de Turnos', desc: 'Oculta cifras del turno en curso al despachador' },
+                    { key: 'ocultarBotonOtrasBombas', label: 'Ocultar Botón Otras Bombas', desc: 'Oculta dispensadores ajenos al turno asignado' },
                   ].map((toggle) => (
                     <label
                       key={toggle.key}
@@ -1539,14 +1534,14 @@ export const StoresPage: React.FC = () => {
               </div>
             )}
 
-            {/* TAB: HOSES & PRICES */}
+            {/* TAB: HOSES */}
             {activeTab === 'hoses' && (
               <div className="space-y-4 py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <h4 className="text-sm font-semibold">Mangueras y Precios de Combustible</h4>
+                    <h4 className="text-sm font-semibold">Mangueras</h4>
                     <p className="text-xs text-muted-foreground">
-                      Bombas y mangueras configuradas para {form.name || form.code}. Los cambios se reflejan inmediatamente en pista.
+                      Bombas, mangueras y combustibles asignados a {form.name || form.code}. Los cambios se reflejan inmediatamente en la pista.
                     </p>
                   </div>
                   {form.code && (
@@ -1558,7 +1553,7 @@ export const StoresPage: React.FC = () => {
                         className="gap-1.5 text-xs h-8"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        Agregar Bomba / Manguera
+                        Agregar Manguera
                       </Button>
                       <Button
                         type="button"
@@ -1577,7 +1572,7 @@ export const StoresPage: React.FC = () => {
 
                 {!editingStore ? (
                   <div className="p-8 text-center border rounded-lg bg-muted/20 text-muted-foreground text-xs">
-                    Guarde la tienda primero para poder consultar y configurar sus mangueras y precios.
+                    Guarde la tienda primero para poder consultar y configurar sus mangueras.
                   </div>
                 ) : loadingHoses ? (
                   <div className="p-8 text-center flex flex-col items-center gap-2 text-muted-foreground text-xs">
@@ -1599,7 +1594,7 @@ export const StoresPage: React.FC = () => {
                         className="gap-1.5 text-xs mt-1"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        Agregar Bomba / Manguera
+                        Agregar Manguera
                       </Button>
                     )}
                   </div>
@@ -1738,88 +1733,173 @@ export const StoresPage: React.FC = () => {
               </div>
             )}
 
-            {/* TAB: DATABASE CONNECTION */}
+            {/* TAB: TPV CONNECTION */}
             {activeTab === 'db' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                <div className="col-span-full text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/20">
-                  Parámetros de conexión directa PostgreSQL hacia la base de datos de la estación local para sincronización ETL periódica.
+              <div className="space-y-4 py-4">
+                <div className="text-xs text-muted-foreground bg-primary/5 p-3.5 rounded-lg border border-primary/20 space-y-1">
+                  <div className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Server className="w-4 h-4 text-primary" />
+                    Enlace de Comunicación con el TPV Local
+                  </div>
+                  <div>
+                    Configura el endpoint del backend del TPV y la clave de autenticación única (Key UUID).
+                    Esta clave vincula de forma segura la base de datos y transacciones de la terminal con el Backoffice Cloud.
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="ip" className="text-xs font-medium">IP o Host del POS *</Label>
-                  <Input
-                    id="ip"
-                    placeholder="127.0.0.1 o IP LAN"
-                    value={form.ip || ''}
-                    onChange={(e) => setForm({ ...form, ip: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Endpoint Backend TPV */}
+                  <div className="col-span-full space-y-1.5">
+                    <Label htmlFor="ip" className="text-xs font-medium">Endpoint / URL del Backend TPV *</Label>
+                    <Input
+                      id="ip"
+                      placeholder="Ej. http://192.168.1.50:5012 o https://tpv-estacion01.mitunel.com"
+                      value={form.ip || ''}
+                      onChange={(e) => setForm({ ...form, ip: e.target.value })}
+                      required
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Dirección IP o URL pública/túnel donde responde el servicio backend local del TPV.
+                    </p>
+                  </div>
+
+                  {/* Key UUID de Seguridad */}
+                  <div className="col-span-full space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="dbPassword" className="text-xs font-medium flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-amber-500" />
+                        Key de Seguridad del TPV (UUID)
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateUuidKey}
+                        className="h-7 text-xs gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                      >
+                        <Zap className="w-3 h-3 text-amber-500" />
+                        Generar Key UUID
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="dbPassword"
+                          type={showTpvKey ? 'text' : 'password'}
+                          placeholder={editingStore ? '•••••••••••••••• (Conservar actual o generar nueva)' : 'Haga clic en Generar Key UUID o ingrese una clave'}
+                          value={form.dbPassword || ''}
+                          onChange={(e) => setForm({ ...form, dbPassword: e.target.value })}
+                          className="font-mono text-xs pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTpvKey(!showTpvKey)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          title={showTpvKey ? 'Ocultar' : 'Mostrar'}
+                        >
+                          {showTpvKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleCopyTpvKey}
+                        className="h-9 px-3 text-xs gap-1.5 shrink-0"
+                        title="Copiar Key al portapapeles"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Copiar
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Token criptográfico UUID para identificar y autenticar el intercambio de datos entre este TPV y el servidor central.
+                    </p>
+                  </div>
+
+                  {/* Intervalo Auto-Sync */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="syncMinutes" className="text-xs font-medium">Intervalo de Sincronización (minutos)</Label>
+                    <Input
+                      id="syncMinutes"
+                      type="number"
+                      min="1"
+                      max="1440"
+                      placeholder="5"
+                      value={form.SyncMinutes || 5}
+                      onChange={(e) => setForm({ ...form, SyncMinutes: parseInt(e.target.value, 10) || 5 })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Frecuencia automática con la que el TPV envía ventas y estado al Backoffice.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="dbPort" className="text-xs font-medium">Puerto PostgreSQL</Label>
-                  <Input
-                    id="dbPort"
-                    type="number"
-                    placeholder="5432"
-                    value={form.dbPort || 5432}
-                    onChange={(e) => setForm({ ...form, dbPort: parseInt(e.target.value, 10) || 5432 })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="dbName" className="text-xs font-medium">Nombre Base de Datos</Label>
-                  <Input
-                    id="dbName"
-                    placeholder="prisma"
-                    value={form.dbName || ''}
-                    onChange={(e) => setForm({ ...form, dbName: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="dbUser" className="text-xs font-medium">Usuario PostgreSQL</Label>
-                  <Input
-                    id="dbUser"
-                    placeholder="postgres"
-                    value={form.dbUser || ''}
-                    onChange={(e) => setForm({ ...form, dbUser: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="dbPassword" className="text-xs font-medium">Contraseña PostgreSQL</Label>
-                  <Input
-                    id="dbPassword"
-                    type="password"
-                    placeholder={editingStore ? '•••••••• (Sin cambios)' : '••••••••'}
-                    value={form.dbPassword || ''}
-                    onChange={(e) => setForm({ ...form, dbPassword: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="syncMinutes" className="text-xs font-medium">Intervalo Auto-Sync (minutos)</Label>
-                  <Input
-                    id="syncMinutes"
-                    type="number"
-                    placeholder="5"
-                    value={form.SyncMinutes || 5}
-                    onChange={(e) => setForm({ ...form, SyncMinutes: parseInt(e.target.value, 10) || 5 })}
-                  />
-                </div>
-
-                <div className="col-span-full pt-2">
-                  <Button
+                {/* Sección Desplegable: Parámetros Avanzados PostgreSQL */}
+                <div className="pt-2 border-t border-border/40">
+                  <button
                     type="button"
-                    variant="outline"
-                    onClick={handleTestConnection}
-                    disabled={testingConnection}
-                    className="gap-2 text-xs"
+                    onClick={() => setShowAdvancedDb(!showAdvancedDb)}
+                    className="flex items-center justify-between w-full py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <Database className={`w-4 h-4 ${testingConnection ? 'animate-spin' : ''}`} />
-                    {testingConnection ? 'Probando conexión...' : 'Probar Conexión con PostgreSQL'}
-                  </Button>
+                    <span className="flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5 text-muted-foreground" />
+                      Opciones avanzadas: Acceso directo PostgreSQL (Opcional para ETL directo)
+                    </span>
+                    {showAdvancedDb ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {showAdvancedDb && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 p-3 bg-muted/20 rounded-lg border border-border/40 mt-1">
+                      <div className="space-y-1">
+                        <Label htmlFor="dbPort" className="text-[11px] font-medium">Puerto PostgreSQL</Label>
+                        <Input
+                          id="dbPort"
+                          type="number"
+                          placeholder="5432"
+                          value={form.dbPort || 5432}
+                          onChange={(e) => setForm({ ...form, dbPort: parseInt(e.target.value, 10) || 5432 })}
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="dbName" className="text-[11px] font-medium">Base de Datos</Label>
+                        <Input
+                          id="dbName"
+                          placeholder="prisma"
+                          value={form.dbName || ''}
+                          onChange={(e) => setForm({ ...form, dbName: e.target.value })}
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="dbUser" className="text-[11px] font-medium">Usuario DB</Label>
+                        <Input
+                          id="dbUser"
+                          placeholder="postgres"
+                          value={form.dbUser || ''}
+                          onChange={(e) => setForm({ ...form, dbUser: e.target.value })}
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+
+                      <div className="col-span-full pt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTestConnection}
+                          disabled={testingConnection}
+                          className="gap-2 text-xs h-8"
+                        >
+                          <Database className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin' : ''}`} />
+                          {testingConnection ? 'Probando conexión...' : 'Probar Conexión PostgreSQL'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
