@@ -1,9 +1,9 @@
-export function getStoreCode(): string | null {
+export function getStoreCode(): string {
   try {
     const store = sessionStorage.getItem('selectedStore');
-    return store ? JSON.parse(store).code : null;
+    return store ? (JSON.parse(store).code || 'GLOBAL') : 'GLOBAL';
   } catch {
-    return null;
+    return 'GLOBAL';
   }
 }
 

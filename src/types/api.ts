@@ -131,10 +131,12 @@ export interface Customer {
   rtn: string;
   billingType: number;
   billingTypeLabel: string;
-  blocked: number;
+  blocked: boolean | number;
   address?: string;
   phone?: string;
   email?: string;
+  creditLimit?: number;
+  notes?: string;
 }
 
 export interface DashboardProduct {

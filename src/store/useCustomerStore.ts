@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Customer, PaginatedResponse } from '../types/api';
-import { getCustomers as getCustomersApi, getCustomer as getCustomerApi, createCustomer as createCustomerApi, updateCustomer as updateCustomerApi, toggleCustomerStatus as toggleCustomerStatusApi } from '../services/customer.service';
+import { getCustomers as getCustomersApi, getCustomer as getCustomerApi, getNextCustomerCode as getNextCustomerCodeApi, createCustomer as createCustomerApi, updateCustomer as updateCustomerApi, toggleCustomerStatus as toggleCustomerStatusApi } from '../services/customer.service';
 
 interface CustomerFilters {
   search?: string;
@@ -12,7 +12,8 @@ interface CustomerFilters {
 interface CustomerState {
   getCustomers: (filters?: CustomerFilters) => Promise<PaginatedResponse<Customer>>;
   getCustomer: (customerNo: string) => Promise<Customer | null>;
-  createCustomer: (data: { customerNo: string; customerName: string; rtn?: string; billingType: number }) => Promise<{ success: boolean; error?: string; customerNo?: string }>;
+  getNextCustomerCode: (billingType: number) => Promise<{ customerNo: string }>;
+  createCustomer: (data: { customerNo: string; customerName: string; rtn?: string; billingType: number; creditLimit?: number; notes?: string }) => Promise<{ success: boolean; error?: string; customerNo?: string; customer?: Customer }>;
   updateCustomer: (customerNo: string, data: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   toggleCustomerStatus: (customerNo: string) => Promise<{ success: boolean; error?: string; blocked?: boolean }>;
 }
@@ -31,6 +32,15 @@ export const useCustomerStore = create<CustomerState>(() => ({
       return await getCustomerApi(customerNo) || null;
     } catch {
       return null;
+    }
+  },
+
+  getNextCustomerCode: async (billingType: number) => {
+    try {
+      return await getNextCustomerCodeApi(billingType);
+    } catch {
+      const prefix = Number(billingType) === 0 ? 'CC-' : 'CCO-';
+      return { customerNo: `${prefix}00001` };
     }
   },
 

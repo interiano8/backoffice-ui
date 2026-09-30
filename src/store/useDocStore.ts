@@ -18,7 +18,7 @@ interface DocFilters {
 
 interface DocState {
   getDocuments: (filters?: DocFilters) => Promise<PaginatedResponse<DocumentHeader>>;
-  searchCustomers: (search: string) => Promise<{ customerNo: string; customerName: string; rtn: string; usualBillingType?: number; blocked?: number }[]>;
+  searchCustomers: (search: string) => Promise<{ customerNo: string; customerName: string; rtn: string; usualBillingType?: number; blocked?: number | boolean }[]>;
   getChargeMethods: () => Promise<{ code: string; description: string }[]>;
   updateDocument: (transactionId: string, data: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
 }

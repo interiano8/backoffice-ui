@@ -21,7 +21,22 @@ export async function getCustomer(customerNo: string): Promise<Customer> {
   return data;
 }
 
-export async function createCustomer(payload: { customerNo: string; customerName: string; rtn?: string; billingType: number }) {
+export async function getNextCustomerCode(billingType: number): Promise<{ customerNo: string }> {
+  const { data } = await api.get('/customers/next-code', {
+    headers: { 'x-store-code': getStoreCode() },
+    params: { billingType },
+  });
+  return data;
+}
+
+export async function createCustomer(payload: {
+  customerNo: string;
+  customerName: string;
+  rtn?: string;
+  billingType: number;
+  creditLimit?: number;
+  notes?: string;
+}) {
   const { data } = await api.post('/customers', payload, {
     headers: { 'x-store-code': getStoreCode() },
   });

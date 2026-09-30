@@ -44,7 +44,7 @@ const formatRtn = (value: string): string => {
 };
 
 const Customers: React.FC = () => {
-    const { getCustomers, createCustomer, updateCustomer, toggleCustomerStatus } = useCustomerStore();
+    const { getCustomers, getNextCustomerCode, createCustomer, updateCustomer, toggleCustomerStatus } = useCustomerStore();
     const { selectedStore } = useAppStore();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [totalCustomers, setTotalCustomers] = useState(0);
@@ -53,13 +53,19 @@ const Customers: React.FC = () => {
     const [hasSearched, setHasSearched] = useState(false);
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [loadingCode, setLoadingCode] = useState(false);
     const [createForm, setCreateForm] = useState({
         customerNo: '',
         customerName: '',
         rtn: '',
-        billingType: 1,
+        billingType: 1, // 1 = Contado, 0 = Crédito
+        creditLimit: '',
+        notes: ''
     });
     const [creatingCustomer, setCreatingCustomer] = useState(false);
+
+    const [createdCustomer, setCreatedCustomer] = useState<Customer | null>(null);
+    const [isSuccessOpen, setIsSuccessOpen] = useState(false);
 
     const [filters, setFilters] = useState({
         search: '',
@@ -72,6 +78,26 @@ const Customers: React.FC = () => {
     const [savingCustomer, setSavingCustomer] = useState(false);
 
     const [togglingCustomer, setTogglingCustomer] = useState<string | null>(null);
+
+    const fetchNextCode = useCallback(async (billingType: number) => {
+        setLoadingCode(true);
+        try {
+            const res = await getNextCustomerCode(billingType);
+            if (res && res.customerNo) {
+                setCreateForm(prev => ({ ...prev, customerNo: res.customerNo }));
+            }
+        } catch (err) {
+            console.error('Error fetching next customer code', err);
+        } finally {
+            setLoadingCode(false);
+        }
+    }, [getNextCustomerCode]);
+
+    useEffect(() => {
+        if (isCreateOpen) {
+            fetchNextCode(createForm.billingType);
+        }
+    }, [isCreateOpen, createForm.billingType, fetchNextCode]);
 
     const fetchCustomers = useCallback(async (isManual = false, overrideFilters?: any) => {
         if (isManual) setIsRefreshing(true);
@@ -183,12 +209,25 @@ const Customers: React.FC = () => {
                 customerName: createForm.customerName.trim(),
                 rtn: createForm.rtn.replace(/\D/g, ''),
                 billingType: Number(createForm.billingType),
+                creditLimit: createForm.billingType === 0 ? Number(createForm.creditLimit || 0) : 0,
+                notes: createForm.billingType === 0 ? createForm.notes : undefined,
             });
 
             if (res.success) {
-                toast.success('Cliente registrado exitosamente');
                 setIsCreateOpen(false);
-                setCreateForm({ customerNo: '', customerName: '', rtn: '', billingType: 1 });
+                const newCustomerData: Customer = res.customer || {
+                    customerNo: createForm.customerNo.trim(),
+                    customerName: createForm.customerName.trim(),
+                    rtn: createForm.rtn.replace(/\D/g, ''),
+                    billingType: Number(createForm.billingType),
+                    billingTypeLabel: Number(createForm.billingType) === 0 ? 'Credito' : 'Contado',
+                    blocked: false,
+                    creditLimit: Number(createForm.creditLimit || 0),
+                    notes: createForm.notes,
+                };
+                setCreatedCustomer(newCustomerData);
+                setIsSuccessOpen(true);
+                setCreateForm({ customerNo: '', customerName: '', rtn: '', billingType: 1, creditLimit: '', notes: '' });
                 fetchCustomers(true);
             } else {
                 toast.error(res.error || 'Error al registrar cliente');
@@ -521,7 +560,7 @@ const Customers: React.FC = () => {
             )}
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[450px]">
                     <DialogHeader>
                         <DialogTitle>Nuevo Cliente (Matriz Global)</DialogTitle>
                         <DialogDescription>
@@ -530,14 +569,42 @@ const Customers: React.FC = () => {
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Código de Cliente *</label>
-                            <Input 
-                                value={createForm.customerNo}
-                                onChange={(e) => setCreateForm(prev => ({ ...prev, customerNo: e.target.value }))}
-                                placeholder="Ej: CLI-001"
-                                className="text-sm font-mono"
-                            />
+                            <label className="text-xs font-bold uppercase text-muted-foreground">Tipo de Cuenta</label>
+                            <Select 
+                                value={String(createForm.billingType)}
+                                onValueChange={(v) => {
+                                    const newType = Number(v);
+                                    setCreateForm(prev => ({ ...prev, billingType: newType }));
+                                }}
+                            >
+                                <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="Seleccione tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1" className="text-xs">Contado (CCO-XXXXX)</SelectItem>
+                                    <SelectItem value="0" className="text-xs">Crédito (CC-XXXXX)</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
+
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold uppercase text-muted-foreground">Código de Cliente *</label>
+                                <span className="text-[10px] text-muted-foreground italic">Correlativo automático</span>
+                            </div>
+                            <div className="relative">
+                                <Input 
+                                    value={createForm.customerNo}
+                                    onChange={(e) => setCreateForm(prev => ({ ...prev, customerNo: e.target.value }))}
+                                    placeholder="Cargando código..."
+                                    className="text-sm font-mono pr-8"
+                                />
+                                {loadingCode && (
+                                    <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                            </div>
+                        </div>
+
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground">Nombre Completo *</label>
                             <Input 
@@ -547,6 +614,7 @@ const Customers: React.FC = () => {
                                 className="text-sm"
                             />
                         </div>
+
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground">RTN</label>
                             <Input 
@@ -557,21 +625,32 @@ const Customers: React.FC = () => {
                                 maxLength={18}
                             />
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Tipo de Cuenta</label>
-                            <Select 
-                                value={String(createForm.billingType)}
-                                onValueChange={(v) => setCreateForm(prev => ({ ...prev, billingType: Number(v) }))}
-                            >
-                                <SelectTrigger className="h-9 text-xs">
-                                    <SelectValue placeholder="Seleccione tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1" className="text-xs">Contado</SelectItem>
-                                    <SelectItem value="0" className="text-xs">Crédito</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+
+                        {createForm.billingType === 0 && (
+                            <>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase text-muted-foreground">Límite de Crédito (Lempiras L.)</label>
+                                    <Input 
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={createForm.creditLimit}
+                                        onChange={(e) => setCreateForm(prev => ({ ...prev, creditLimit: e.target.value }))}
+                                        placeholder="0.00"
+                                        className="text-sm font-mono"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase text-muted-foreground">Observaciones / Notas</label>
+                                    <Input 
+                                        value={createForm.notes}
+                                        onChange={(e) => setCreateForm(prev => ({ ...prev, notes: e.target.value }))}
+                                        placeholder="Términos de crédito u observaciones..."
+                                        className="text-sm"
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
@@ -579,11 +658,83 @@ const Customers: React.FC = () => {
                         </Button>
                         <Button 
                             onClick={handleCreateCustomer} 
-                            disabled={creatingCustomer || !createForm.customerNo.trim() || !createForm.customerName.trim()}
+                            disabled={creatingCustomer || loadingCode || !createForm.customerNo.trim() || !createForm.customerName.trim()}
                             className="gap-2"
                         >
                             {creatingCustomer && <Loader2 className="h-4 w-4 animate-spin" />}
                             Registrar Cliente
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 shrink-0">
+                                <Check className="h-6 w-6 text-emerald-600" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg font-bold text-emerald-600">¡Cliente Creado Exitosamente!</DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    Registrado en la Administración Centralizada de la Matriz.
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    {createdCustomer && (
+                        <div className="space-y-2.5 py-3 bg-muted/40 p-4 rounded-xl border text-xs">
+                            <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground font-medium">Código:</span>
+                                <span className="col-span-2 font-mono font-bold text-primary">{createdCustomer.customerNo}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground font-medium">Nombre:</span>
+                                <span className="col-span-2 font-semibold text-foreground">{createdCustomer.customerName}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground font-medium">RTN:</span>
+                                <span className="col-span-2 font-mono tabular-nums">{createdCustomer.rtn ? formatRtn(createdCustomer.rtn) : 'Sin RTN'}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground font-medium">Tipo de Cuenta:</span>
+                                <span className="col-span-2">
+                                    <Badge 
+                                        variant={createdCustomer.billingType === 0 ? "default" : "secondary"}
+                                        className="text-[10px] uppercase font-bold"
+                                    >
+                                        {createdCustomer.billingTypeLabel || (createdCustomer.billingType === 0 ? 'Credito' : 'Contado')}
+                                    </Badge>
+                                </span>
+                            </div>
+                            {createdCustomer.billingType === 0 && (
+                                <>
+                                    <div className="grid grid-cols-3 gap-1">
+                                        <span className="text-muted-foreground font-medium">Límite Crédito:</span>
+                                        <span className="col-span-2 font-mono font-bold text-emerald-600">
+                                            L. {Number(createdCustomer.creditLimit || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                    {createdCustomer.notes && (
+                                        <div className="grid grid-cols-3 gap-1">
+                                            <span className="text-muted-foreground font-medium">Observaciones:</span>
+                                            <span className="col-span-2 text-muted-foreground italic">{createdCustomer.notes}</span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            <div className="grid grid-cols-3 gap-1 border-t pt-2 mt-1">
+                                <span className="text-muted-foreground font-medium">Estado:</span>
+                                <span className="col-span-2 text-emerald-600 font-bold">ACTIVO</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button className="w-full" onClick={() => setIsSuccessOpen(false)}>
+                            Entendido / Cerrar
                         </Button>
                     </DialogFooter>
                 </DialogContent>

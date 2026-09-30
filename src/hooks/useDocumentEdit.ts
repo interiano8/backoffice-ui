@@ -19,7 +19,7 @@ interface EditFormData {
     chofer: string;
     km: string;
     orden: string;
-    blocked?: number;
+    blocked?: number | boolean;
     usualBillingType?: number;
 }
 
