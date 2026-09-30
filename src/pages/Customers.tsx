@@ -80,17 +80,21 @@ const Customers: React.FC = () => {
         }
     }, [getCustomers, filters]);
 
+    const isGlobalMode = !selectedStore || selectedStore.code === 'GLOBAL' || selectedStore.code === '000';
+
     useEffect(() => {
-        if (selectedStore) {
-            fetchCustomers();
-        }
-    }, [selectedStore]);
+        fetchCustomers();
+    }, [selectedStore?.code]);
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
     };
 
     const handleEditClick = (customer: Customer) => {
+        if (!isGlobalMode) {
+            toast.warning('La modificación de clientes solo está permitida desde la Administración Global (Matriz).');
+            return;
+        }
         setEditingCustomer(customer);
         setEditForm({
             customerName: customer.customerName,
@@ -123,6 +127,10 @@ const Customers: React.FC = () => {
     };
 
     const handleToggleStatus = async (customer: Customer) => {
+        if (!isGlobalMode) {
+            toast.warning('La modificación de estado de clientes solo está permitida desde la Administración Global (Matriz).');
+            return;
+        }
         setTogglingCustomer(customer.customerNo);
         try {
             const res = await toggleCustomerStatus(customer.customerNo);
@@ -151,23 +159,13 @@ const Customers: React.FC = () => {
         { id: '0', label: 'Credito' },
     ];
 
-    if (!selectedStore || selectedStore.code === 'GLOBAL' || selectedStore.code === '000') {
-        return (
-            <div className="flex items-center justify-center h-[60vh]">
-                <Card className="w-[400px]">
-                    <CardHeader>
-                        <CardTitle className="text-center">Seleccione una tienda</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center text-muted-foreground">
-                        Debe seleccionar una sucursal en el menu superior para ver los clientes.
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     return (
         <div className="flex flex-col h-full space-y-4">
+            {!isGlobalMode && (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs px-3 py-2 rounded-md flex items-center justify-between shrink-0">
+                    <span>Modo Sucursal ({selectedStore?.name}): Los clientes se administran centralmente desde la Matriz Global. (Solo lectura en sucursales)</span>
+                </div>
+            )}
             <div className="flex flex-col md:flex-row justify-start items-start md:items-center gap-12 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 rounded-xl border border-border/50 sticky top-0 z-10 shadow-sm">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">

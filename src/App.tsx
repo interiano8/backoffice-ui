@@ -364,7 +364,7 @@ function AnimatedRoutes() {
             <Route path="/ctrl" element={<RequireStore><CtrlSales /></RequireStore>} />
             <Route path="/tank-measurements" element={<RequireStore><TankMeasurements /></RequireStore>} />
             <Route path="/documents" element={<RequireStore><Documents /></RequireStore>} />
-            <Route path="/customers" element={<RequireStore><Customers /></RequireStore>} />
+            <Route path="/customers" element={<Customers />} />
             <Route path="/hose-prices" element={<RequireStore><HosePrices /></RequireStore>} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/tiendas" element={<StoresPage />} />

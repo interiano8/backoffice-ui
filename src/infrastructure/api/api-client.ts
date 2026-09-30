@@ -48,12 +48,15 @@ export const getHubURL = (): string => {
 // Crear instancia de axios (sin baseURL fija, se inyecta en cada petición)
 const api = axios.create();
 
+const CENTRAL_ROUTES = ['/users', '/roles', '/permissions', '/alerts', '/tiendas', '/stores', '/customers'];
+
 // Interceptor para inyectar la URL base dinámica, el token y el x-store-code
 api.interceptors.request.use(
     (config) => {
         // Inyectar baseURL dinámicamente si no está definida
         if (!config.baseURL) {
-            config.baseURL = getBaseURL();
+            const isCentralRoute = config.url && CENTRAL_ROUTES.some(route => config.url?.startsWith(route));
+            config.baseURL = isCentralRoute ? getHubURL() : getBaseURL();
         }
 
         const token = sessionStorage.getItem('token');

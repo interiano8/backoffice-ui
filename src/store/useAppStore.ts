@@ -161,9 +161,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setSelectedStore: (store: Store | null) => {
-    if (!store) {
+    if (!store || store.code === 'GLOBAL' || store.code === '000' || store.id === 'GLOBAL') {
       sessionStorage.removeItem('selectedStore');
-      set({ selectedStore: null });
+      sessionStorage.removeItem('activeApiUrl');
+      set({ selectedStore: GLOBAL_STORE, activeApiUrl: null });
       return;
     }
     sessionStorage.setItem('selectedStore', JSON.stringify(store));
@@ -172,6 +173,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (targetUrl) {
       sessionStorage.setItem('activeApiUrl', targetUrl);
       set({ activeApiUrl: targetUrl, isLocalMode: isLocal });
+    } else {
+      sessionStorage.removeItem('activeApiUrl');
+      set({ activeApiUrl: null });
     }
     set({ selectedStore: store, availableDates: [] });
     const token = sessionStorage.getItem('token');
