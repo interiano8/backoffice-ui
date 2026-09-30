@@ -233,7 +233,7 @@ describe('UsersPage & RBAC Multi-role Management', () => {
       expect(screen.getByPlaceholderText('usuario@ejemplo.com')).toBeInTheDocument();
     });
 
-    const userInput = screen.getByPlaceholderText('usuario');
+    const userInput = screen.getByPlaceholderText('USUARIO');
     const nameInput = screen.getByPlaceholderText('Nombre completo');
     const emailInput = screen.getByPlaceholderText('usuario@ejemplo.com');
     const passwordInput = screen.getByPlaceholderText('Requerida');
@@ -248,7 +248,7 @@ describe('UsersPage & RBAC Multi-role Management', () => {
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/users', expect.objectContaining({
-        username: 'nuevo',
+        username: 'NUEVO',
         name: 'Nuevo Usuario',
         email: 'nuevo@empresa.com',
         password: 'pass123',

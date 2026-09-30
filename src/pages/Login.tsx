@@ -186,12 +186,12 @@ export const Login: React.FC = () => {
                                     <Input
                                         id="username"
                                         type="text"
-                                        placeholder="Ej. jperez"
+                                        placeholder="Ej. JPEREZ"
                                         value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
+                                        onChange={(e) => setUsername(e.target.value.toUpperCase())}
                                         required
                                         autoComplete="username"
-                                        className="h-10 rounded-lg transition-all focus-visible:ring-offset-0"
+                                        className="h-10 rounded-lg transition-all focus-visible:ring-offset-0 uppercase"
                                     />
                                 </div>
 

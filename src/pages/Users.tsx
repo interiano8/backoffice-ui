@@ -400,10 +400,10 @@ export const UsersPage: React.FC = () => {
                 </label>
                 <Input
                   value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  onChange={(e) => setForm({ ...form, username: e.target.value.toUpperCase() })}
                   disabled={!!editingUser}
-                  placeholder="usuario"
-                  className="h-9"
+                  placeholder="USUARIO"
+                  className="h-9 uppercase"
                 />
               </div>
               <div>
