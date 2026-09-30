@@ -173,7 +173,7 @@ const Customers: React.FC = () => {
                         Modulo de Clientes
                     </h1>
                     <p className="text-muted-foreground text-sm">
-                        Gestion de clientes de {selectedStore.name}.
+                        Gestion de clientes de {selectedStore?.name}.
                     </p>
                 </div>
                 <div className="flex items-center gap-2 w-full md:w-auto">
