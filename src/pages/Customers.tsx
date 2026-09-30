@@ -44,7 +44,7 @@ const formatRtn = (value: string): string => {
 };
 
 const Customers: React.FC = () => {
-    const { getCustomers, getNextCustomerCode, createCustomer, updateCustomer, toggleCustomerStatus } = useCustomerStore();
+    const { getCustomers, createCustomer, updateCustomer, toggleCustomerStatus } = useCustomerStore();
     const { selectedStore } = useAppStore();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [totalCustomers, setTotalCustomers] = useState(0);
@@ -53,7 +53,6 @@ const Customers: React.FC = () => {
     const [hasSearched, setHasSearched] = useState(false);
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [loadingCode, setLoadingCode] = useState(false);
     const [createForm, setCreateForm] = useState({
         customerNo: '',
         customerName: '',
@@ -78,26 +77,6 @@ const Customers: React.FC = () => {
     const [savingCustomer, setSavingCustomer] = useState(false);
 
     const [togglingCustomer, setTogglingCustomer] = useState<string | null>(null);
-
-    const fetchNextCode = useCallback(async (billingType: number) => {
-        setLoadingCode(true);
-        try {
-            const res = await getNextCustomerCode(billingType);
-            if (res && res.customerNo) {
-                setCreateForm(prev => ({ ...prev, customerNo: res.customerNo }));
-            }
-        } catch (err) {
-            console.error('Error fetching next customer code', err);
-        } finally {
-            setLoadingCode(false);
-        }
-    }, [getNextCustomerCode]);
-
-    useEffect(() => {
-        if (isCreateOpen) {
-            fetchNextCode(createForm.billingType);
-        }
-    }, [isCreateOpen, createForm.billingType, fetchNextCode]);
 
     const fetchCustomers = useCallback(async (isManual = false, overrideFilters?: any) => {
         if (isManual) setIsRefreshing(true);
@@ -204,14 +183,7 @@ const Customers: React.FC = () => {
         }
         setCreatingCustomer(true);
         try {
-            let codeToUse = createForm.customerNo.trim();
-            if (!codeToUse) {
-                const nextRes = await getNextCustomerCode(Number(createForm.billingType));
-                codeToUse = nextRes?.customerNo || (Number(createForm.billingType) === 0 ? 'CC-00001' : 'CCO-00001');
-            }
-
             const res = await createCustomer({
-                customerNo: codeToUse,
                 customerName: createForm.customerName.trim(),
                 rtn: createForm.rtn.replace(/\D/g, ''),
                 billingType: Number(createForm.billingType),
@@ -221,8 +193,9 @@ const Customers: React.FC = () => {
 
             if (res.success) {
                 setIsCreateOpen(false);
+                const assignedCode = res.customerNo || res.customer?.customerNo || '';
                 const newCustomerData: Customer = res.customer || {
-                    customerNo: codeToUse,
+                    customerNo: assignedCode,
                     customerName: createForm.customerName.trim(),
                     rtn: createForm.rtn.replace(/\D/g, ''),
                     billingType: Number(createForm.billingType),
@@ -594,22 +567,16 @@ const Customers: React.FC = () => {
 
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold uppercase text-muted-foreground">Código (Autogenerado)</label>
+                                <label className="text-xs font-bold uppercase text-muted-foreground">Código de Cliente</label>
                                 <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                                    <Check className="h-3 w-3" /> Correlativo Automático
+                                    <Check className="h-3 w-3" /> Asignación en BD al guardar
                                 </span>
                             </div>
-                            <div className="relative">
-                                <Input 
-                                    value={createForm.customerNo}
-                                    readOnly
-                                    placeholder={loadingCode ? "Calculando código..." : "Autogenerado al guardar"}
-                                    className="text-sm font-mono font-bold text-primary bg-muted/40 cursor-default pr-8"
-                                />
-                                {loadingCode && (
-                                    <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
-                                )}
-                            </div>
+                            <Input 
+                                value={createForm.billingType === 0 ? "Asignación automática al guardar (CC-XXXXX)" : "Asignación automática al guardar (CCO-XXXXX)"}
+                                readOnly
+                                className="text-xs font-mono italic text-muted-foreground bg-muted/40 cursor-default"
+                            />
                         </div>
 
                         <div className="space-y-1.5">

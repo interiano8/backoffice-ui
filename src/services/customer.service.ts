@@ -30,7 +30,7 @@ export async function getNextCustomerCode(billingType: number): Promise<{ custom
 }
 
 export async function createCustomer(payload: {
-  customerNo: string;
+  customerNo?: string;
   customerName: string;
   rtn?: string;
   billingType: number;

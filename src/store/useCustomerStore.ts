@@ -13,7 +13,7 @@ interface CustomerState {
   getCustomers: (filters?: CustomerFilters) => Promise<PaginatedResponse<Customer>>;
   getCustomer: (customerNo: string) => Promise<Customer | null>;
   getNextCustomerCode: (billingType: number) => Promise<{ customerNo: string }>;
-  createCustomer: (data: { customerNo: string; customerName: string; rtn?: string; billingType: number; creditLimit?: number; notes?: string }) => Promise<{ success: boolean; error?: string; customerNo?: string; customer?: Customer }>;
+  createCustomer: (data: { customerNo?: string; customerName: string; rtn?: string; billingType: number; creditLimit?: number; notes?: string }) => Promise<{ success: boolean; error?: string; customerNo?: string; customer?: Customer }>;
   updateCustomer: (customerNo: string, data: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   toggleCustomerStatus: (customerNo: string) => Promise<{ success: boolean; error?: string; blocked?: boolean }>;
 }
