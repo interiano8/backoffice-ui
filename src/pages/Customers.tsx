@@ -639,13 +639,17 @@ const Customers: React.FC = () => {
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold uppercase text-muted-foreground">Límite de Crédito (Lempiras L.)</label>
                                     <Input 
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={createForm.creditLimit}
-                                        onChange={(e) => setCreateForm(prev => ({ ...prev, creditLimit: e.target.value }))}
+                                        onChange={(e) => {
+                                            const raw = e.target.value;
+                                            if (/^\d*\.?\d*$/.test(raw)) {
+                                                setCreateForm(prev => ({ ...prev, creditLimit: raw }));
+                                            }
+                                        }}
                                         placeholder="0.00"
-                                        className="text-sm font-mono"
+                                        className="text-sm font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
