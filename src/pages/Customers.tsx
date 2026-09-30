@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 
 const formatRtn = (value: string): string => {
-    const digits = value.replace(/\D/g, '').slice(0, 16);
+    const digits = value.replace(/\D/g, '');
     if (digits.length > 8) return digits.slice(0, 4) + '-' + digits.slice(4, 8) + '-' + digits.slice(8);
     if (digits.length > 4) return digits.slice(0, 4) + '-' + digits.slice(4);
     return digits;
@@ -310,7 +310,7 @@ const Customers: React.FC = () => {
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                                 <Input 
-                                    placeholder="Nombre, codigo o RTN..." 
+                                    placeholder="Nombre, codigo o RTN / DNI..." 
                                     className="pl-8 h-9 text-xs"
                                     value={filters.search}
                                     onChange={(e) => handleFilterChange('search', e.target.value)}
@@ -374,7 +374,7 @@ const Customers: React.FC = () => {
                             <div className="grid grid-cols-12 gap-2 p-3 bg-muted/40 border-b text-[11px] font-black uppercase text-muted-foreground tracking-tight">
                                 <div className="col-span-2">Codigo</div>
                                 <div className="col-span-4">Nombre Completo</div>
-                                <div className="col-span-2">RTN</div>
+                                <div className="col-span-2">RTN / DNI</div>
                                 <div className="col-span-2 text-center">Tipo Cuenta</div>
                                 <div className="col-span-1 text-center">Estado</div>
                                 <div className="col-span-1 text-center">Acciones</div>
@@ -529,13 +529,12 @@ const Customers: React.FC = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase text-muted-foreground">RTN</label>
+                                <label className="text-xs font-bold uppercase text-muted-foreground">RTN / DNI</label>
                                 <Input 
                                     value={editForm.rtn}
                                     onChange={(e) => setEditForm(prev => ({ ...prev, rtn: formatRtn(e.target.value) }))}
                                     placeholder="0501-2000-15151515"
                                     className="text-sm font-mono"
-                                    maxLength={18}
                                 />
                             </div>
 
@@ -624,13 +623,12 @@ const Customers: React.FC = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">RTN</label>
+                            <label className="text-xs font-bold uppercase text-muted-foreground">RTN / DNI</label>
                             <Input 
                                 value={createForm.rtn}
                                 onChange={(e) => setCreateForm(prev => ({ ...prev, rtn: formatRtn(e.target.value) }))}
                                 placeholder="0501-2000-15151515"
                                 className="text-sm font-mono"
-                                maxLength={18}
                             />
                         </div>
 
@@ -707,8 +705,8 @@ const Customers: React.FC = () => {
                                 <span className="col-span-2 font-semibold text-foreground">{createdCustomer.customerName}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-1">
-                                <span className="text-muted-foreground font-medium">RTN:</span>
-                                <span className="col-span-2 font-mono tabular-nums">{createdCustomer.rtn ? formatRtn(createdCustomer.rtn) : 'Sin RTN'}</span>
+                                <span className="text-muted-foreground font-medium">RTN / DNI:</span>
+                                <span className="col-span-2 font-mono tabular-nums">{createdCustomer.rtn ? formatRtn(createdCustomer.rtn) : 'Sin RTN / DNI'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-1">
                                 <span className="text-muted-foreground font-medium">Tipo de Cuenta:</span>

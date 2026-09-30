@@ -18,7 +18,7 @@ import { CustomerStatementTable } from "../components/CustomerStatementTable";
 import { useCustomerStatements } from "../hooks/useCustomerStatements";
 
 const formatRtn = (v: string): string => {
-  const d = v?.replace(/\D/g, '').slice(0, 16) || '';
+  const d = v?.replace(/\D/g, '') || '';
   if (d.length > 8) return d.slice(0, 4) + '-' + d.slice(4, 8) + '-' + d.slice(8);
   if (d.length > 4) return d.slice(0, 4) + '-' + d.slice(4);
   return d || '-';
@@ -84,7 +84,7 @@ export const CustomerStatements = () => {
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <span className="font-mono text-[11px] font-medium">Cuenta: {selectedCustomer.customerNo}</span>
                   <span className="text-border">·</span>
-                  <span className="font-mono text-[11px]">RTN: {formatRtn(selectedCustomer.rtn)}</span>
+                  <span className="font-mono text-[11px]">RTN / DNI: {formatRtn(selectedCustomer.rtn)}</span>
                 </p>
               </div>
             </div>
@@ -178,7 +178,7 @@ export const CustomerStatements = () => {
               <thead>
                 <tr className="sticky top-0 bg-card z-10 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground h-9 shadow-[0_1px_0_0] shadow-border">
                   <th className="px-5 text-left w-[140px]">Cuenta</th>
-                  <th className="px-5 text-left w-[170px]">RTN</th>
+                  <th className="px-5 text-left w-[170px]">RTN / DNI</th>
                   <th className="px-5 text-left">Nombre</th>
                   <th className="px-5 text-right w-[190px] text-emerald-600">Crédito</th>
                   <th className="px-5 text-right w-[170px] text-amber-600">N. Crédito</th>
