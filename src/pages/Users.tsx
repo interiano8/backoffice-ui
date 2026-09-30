@@ -10,6 +10,7 @@ import { Users, Plus, Pencil, UserCheck, UserX, Check, X, Loader2, AlertTriangle
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RolesManagementModal } from '../components/RolesManagementModal';
+import { useAppStore } from '../store/useAppStore';
 
 interface UserData {
   id: string;
@@ -49,6 +50,9 @@ const isIndicador = (v: string | undefined | null): boolean =>
   v !== undefined && v !== null && v !== '';
 
 export const UsersPage: React.FC = () => {
+  const { selectedStore } = useAppStore();
+  const isGlobalMode = !selectedStore || selectedStore.code === 'GLOBAL' || selectedStore.code === '000';
+
   const [users, setUsers] = useState<UserData[]>([]);
   const [availableRoles, setAvailableRoles] = useState<RoleDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +94,8 @@ export const UsersPage: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/users');
+      const endpoint = isGlobalMode ? '/users' : `/users?storeCode=${selectedStore?.code}`;
+      const { data } = await api.get(endpoint);
       setUsers(data || []);
     } catch {
       toast.error('Error al cargar usuarios');
@@ -102,12 +107,16 @@ export const UsersPage: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchRoles();
-  }, []);
+  }, [selectedStore?.code]);
 
   const activeCount = users.filter(u => u.isActive).length;
   const totalCount = users.length;
 
   const openCreate = () => {
+    if (!isGlobalMode) {
+      toast.warning('La creación de usuarios solo está permitida desde la Administración Global (Matriz).');
+      return;
+    }
     setEditingUser(null);
     setForm({
       username: '',
@@ -243,6 +252,11 @@ export const UsersPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] gap-3 p-1">
+      {!isGlobalMode && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs px-3 py-2 rounded-md flex items-center justify-between shrink-0">
+          <span>Modo Sucursal ({selectedStore?.name}): Los usuarios son administrados centralmente desde la Matriz Global. (Solo lectura de creación en sucursales)</span>
+        </div>
+      )}
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -270,7 +284,13 @@ export const UsersPage: React.FC = () => {
           >
             <Shield className="h-3.5 w-3.5" /> Gestionar Roles
           </Button>
-          <Button onClick={openCreate} size="sm" className="gap-1.5 h-8">
+          <Button
+            onClick={openCreate}
+            size="sm"
+            className="gap-1.5 h-8"
+            disabled={!isGlobalMode}
+            title={!isGlobalMode ? 'La creación de usuarios solo está permitida desde la Matriz Global' : undefined}
+          >
             <Plus className="h-3.5 w-3.5" /> Nuevo Usuario
           </Button>
         </div>
