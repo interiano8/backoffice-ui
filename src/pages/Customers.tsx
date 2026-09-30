@@ -198,14 +198,20 @@ const Customers: React.FC = () => {
     };
 
     const handleCreateCustomer = async () => {
-        if (!createForm.customerNo.trim() || !createForm.customerName.trim()) {
-            toast.error('El código y el nombre del cliente son obligatorios');
+        if (!createForm.customerName.trim()) {
+            toast.error('El nombre del cliente es obligatorio');
             return;
         }
         setCreatingCustomer(true);
         try {
+            let codeToUse = createForm.customerNo.trim();
+            if (!codeToUse) {
+                const nextRes = await getNextCustomerCode(Number(createForm.billingType));
+                codeToUse = nextRes?.customerNo || (Number(createForm.billingType) === 0 ? 'CC-00001' : 'CCO-00001');
+            }
+
             const res = await createCustomer({
-                customerNo: createForm.customerNo.trim(),
+                customerNo: codeToUse,
                 customerName: createForm.customerName.trim(),
                 rtn: createForm.rtn.replace(/\D/g, ''),
                 billingType: Number(createForm.billingType),
@@ -216,7 +222,7 @@ const Customers: React.FC = () => {
             if (res.success) {
                 setIsCreateOpen(false);
                 const newCustomerData: Customer = res.customer || {
-                    customerNo: createForm.customerNo.trim(),
+                    customerNo: codeToUse,
                     customerName: createForm.customerName.trim(),
                     rtn: createForm.rtn.replace(/\D/g, ''),
                     billingType: Number(createForm.billingType),
@@ -589,15 +595,17 @@ const Customers: React.FC = () => {
 
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold uppercase text-muted-foreground">Código de Cliente *</label>
-                                <span className="text-[10px] text-muted-foreground italic">Correlativo automático</span>
+                                <label className="text-xs font-bold uppercase text-muted-foreground">Código (Autogenerado)</label>
+                                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                                    <Check className="h-3 w-3" /> Correlativo Automático
+                                </span>
                             </div>
                             <div className="relative">
                                 <Input 
                                     value={createForm.customerNo}
-                                    onChange={(e) => setCreateForm(prev => ({ ...prev, customerNo: e.target.value }))}
-                                    placeholder="Cargando código..."
-                                    className="text-sm font-mono pr-8"
+                                    readOnly
+                                    placeholder={loadingCode ? "Calculando código..." : "Autogenerado al guardar"}
+                                    className="text-sm font-mono font-bold text-primary bg-muted/40 cursor-default pr-8"
                                 />
                                 {loadingCode && (
                                     <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
@@ -658,7 +666,7 @@ const Customers: React.FC = () => {
                         </Button>
                         <Button 
                             onClick={handleCreateCustomer} 
-                            disabled={creatingCustomer || loadingCode || !createForm.customerNo.trim() || !createForm.customerName.trim()}
+                            disabled={creatingCustomer || !createForm.customerName.trim()}
                             className="gap-2"
                         >
                             {creatingCustomer && <Loader2 className="h-4 w-4 animate-spin" />}
