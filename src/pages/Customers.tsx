@@ -26,7 +26,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
+} from "@/components/ui/dialog";
 
 const formatRtn = (value: string): string => {
     const digits = value.replace(/\D/g, '').slice(0, 16);
@@ -36,13 +44,22 @@ const formatRtn = (value: string): string => {
 };
 
 const Customers: React.FC = () => {
-    const { getCustomers, updateCustomer, toggleCustomerStatus } = useCustomerStore();
+    const { getCustomers, createCustomer, updateCustomer, toggleCustomerStatus } = useCustomerStore();
     const { selectedStore } = useAppStore();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [totalCustomers, setTotalCustomers] = useState(0);
     const [loading, setLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [createForm, setCreateForm] = useState({
+        customerNo: '',
+        customerName: '',
+        rtn: '',
+        billingType: 1,
+    });
+    const [creatingCustomer, setCreatingCustomer] = useState(false);
 
     const [filters, setFilters] = useState({
         search: '',
@@ -154,6 +171,35 @@ const Customers: React.FC = () => {
         fetchCustomers(true, { page: newPage });
     };
 
+    const handleCreateCustomer = async () => {
+        if (!createForm.customerNo.trim() || !createForm.customerName.trim()) {
+            toast.error('El código y el nombre del cliente son obligatorios');
+            return;
+        }
+        setCreatingCustomer(true);
+        try {
+            const res = await createCustomer({
+                customerNo: createForm.customerNo.trim(),
+                customerName: createForm.customerName.trim(),
+                rtn: createForm.rtn.replace(/\D/g, ''),
+                billingType: Number(createForm.billingType),
+            });
+
+            if (res.success) {
+                toast.success('Cliente registrado exitosamente');
+                setIsCreateOpen(false);
+                setCreateForm({ customerNo: '', customerName: '', rtn: '', billingType: 1 });
+                fetchCustomers(true);
+            } else {
+                toast.error(res.error || 'Error al registrar cliente');
+            }
+        } catch (error) {
+            toast.error('Error al registrar cliente');
+        } finally {
+            setCreatingCustomer(false);
+        }
+    };
+
     const billingTypes = [
         { id: 'all', label: 'Todos' },
         { id: '1', label: 'Contado' },
@@ -200,7 +246,7 @@ const Customers: React.FC = () => {
                                 toast.warning('La creación de clientes solo está permitida desde la Matriz Global.');
                                 return;
                             }
-                            toast.info('Los clientes se registran centralmente desde la administración de la Matriz.');
+                            setIsCreateOpen(true);
                         }}
                         disabled={!isGlobalMode}
                         className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
@@ -473,6 +519,75 @@ const Customers: React.FC = () => {
                     </Card>
                 </div>
             )}
+
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Nuevo Cliente (Matriz Global)</DialogTitle>
+                        <DialogDescription>
+                            Registra un nuevo cliente centralizado en la base de datos de la Matriz.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-muted-foreground">Código de Cliente *</label>
+                            <Input 
+                                value={createForm.customerNo}
+                                onChange={(e) => setCreateForm(prev => ({ ...prev, customerNo: e.target.value }))}
+                                placeholder="Ej: CLI-001"
+                                className="text-sm font-mono"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-muted-foreground">Nombre Completo *</label>
+                            <Input 
+                                value={createForm.customerName}
+                                onChange={(e) => setCreateForm(prev => ({ ...prev, customerName: e.target.value }))}
+                                placeholder="Nombre o Razón Social"
+                                className="text-sm"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-muted-foreground">RTN</label>
+                            <Input 
+                                value={createForm.rtn}
+                                onChange={(e) => setCreateForm(prev => ({ ...prev, rtn: formatRtn(e.target.value) }))}
+                                placeholder="0501-2000-15151515"
+                                className="text-sm font-mono"
+                                maxLength={18}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase text-muted-foreground">Tipo de Cuenta</label>
+                            <Select 
+                                value={String(createForm.billingType)}
+                                onValueChange={(v) => setCreateForm(prev => ({ ...prev, billingType: Number(v) }))}
+                            >
+                                <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="Seleccione tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1" className="text-xs">Contado</SelectItem>
+                                    <SelectItem value="0" className="text-xs">Crédito</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button 
+                            onClick={handleCreateCustomer} 
+                            disabled={creatingCustomer || !createForm.customerNo.trim() || !createForm.customerName.trim()}
+                            className="gap-2"
+                        >
+                            {creatingCustomer && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Registrar Cliente
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

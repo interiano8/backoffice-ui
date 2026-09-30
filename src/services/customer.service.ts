@@ -21,6 +21,13 @@ export async function getCustomer(customerNo: string): Promise<Customer> {
   return data;
 }
 
+export async function createCustomer(payload: { customerNo: string; customerName: string; rtn?: string; billingType: number }) {
+  const { data } = await api.post('/customers', payload, {
+    headers: { 'x-store-code': getStoreCode() },
+  });
+  return data;
+}
+
 export async function updateCustomer(customerNo: string, payload: any) {
   const { data } = await api.patch(`/customers/${customerNo}`, payload, {
     headers: { 'x-store-code': getStoreCode() },
