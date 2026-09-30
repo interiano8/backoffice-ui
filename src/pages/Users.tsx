@@ -280,6 +280,8 @@ export const UsersPage: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setRolesModalOpen(true)}
+            disabled={!isGlobalMode}
+            title={!isGlobalMode ? 'La gestión de roles solo está permitida desde la Matriz Global' : undefined}
             className="gap-1.5 h-8 border-accent/40 text-accent hover:bg-accent/10"
           >
             <Shield className="h-3.5 w-3.5" /> Gestionar Roles
@@ -374,8 +376,9 @@ export const UsersPage: React.FC = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => openEdit(user)}
-                              className="h-7 w-7"
-                              title="Editar usuario"
+                              disabled={!isGlobalMode}
+                              className="h-7 w-7 disabled:opacity-30"
+                              title={!isGlobalMode ? 'Edición deshabilitada en modo sucursal' : 'Editar usuario'}
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -383,8 +386,9 @@ export const UsersPage: React.FC = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleToggleActive(user)}
-                              className="h-7 w-7"
-                              title={user.isActive ? 'Desactivar usuario' : 'Activar usuario'}
+                              disabled={!isGlobalMode}
+                              className="h-7 w-7 disabled:opacity-30"
+                              title={!isGlobalMode ? 'Cambio de estado deshabilitado en modo sucursal' : (user.isActive ? 'Desactivar usuario' : 'Activar usuario')}
                             >
                               {user.isActive ? (
                                 <UserX className="h-3.5 w-3.5 text-muted-foreground hover:text-red-500 transition-colors" />

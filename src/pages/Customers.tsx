@@ -8,7 +8,8 @@ import {
     ToggleRight,
     X,
     AlertCircle,
-    Check
+    Check,
+    Plus
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
@@ -191,6 +192,22 @@ const Customers: React.FC = () => {
                         )}
                         {isRefreshing || loading ? 'Buscando...' : 'Buscar'}
                     </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            if (!isGlobalMode) {
+                                toast.warning('La creación de clientes solo está permitida desde la Matriz Global.');
+                                return;
+                            }
+                            toast.info('Los clientes se registran centralmente desde la administración de la Matriz.');
+                        }}
+                        disabled={!isGlobalMode}
+                        className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                        title={!isGlobalMode ? 'La creación de clientes solo está permitida desde la Matriz Global' : undefined}
+                    >
+                        <Plus className="h-4 w-4" /> Nuevo Cliente
+                    </Button>
                 </div>
             </div>
 
@@ -314,8 +331,9 @@ const Customers: React.FC = () => {
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleEditClick(customer)}
-                                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary transition-colors"
-                                                        title="Editar datos del cliente"
+                                                        disabled={!isGlobalMode}
+                                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary transition-colors disabled:opacity-30"
+                                                        title={!isGlobalMode ? "Edición deshabilitada en modo sucursal" : "Editar datos del cliente"}
                                                     >
                                                         <Pencil className="h-3 w-3" />
                                                     </Button>
@@ -328,9 +346,9 @@ const Customers: React.FC = () => {
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => handleToggleStatus(customer)}
-                                                    disabled={togglingCustomer === customer.customerNo}
-                                                    className={`h-6 w-6 p-0 ${customer.blocked ? 'text-red-500 hover:text-red-600' : 'text-emerald-500 hover:text-emerald-600'} transition-all`}
-                                                    title={customer.blocked ? 'Habilitar este cliente' : 'Bloquear este cliente'}
+                                                    disabled={!isGlobalMode || togglingCustomer === customer.customerNo}
+                                                    className={`h-6 w-6 p-0 ${customer.blocked ? 'text-red-500 hover:text-red-600' : 'text-emerald-500 hover:text-emerald-600'} transition-all disabled:opacity-30`}
+                                                    title={!isGlobalMode ? "Cambio de estado deshabilitado en modo sucursal" : (customer.blocked ? 'Habilitar este cliente' : 'Bloquear este cliente')}
                                                 >
                                                     {togglingCustomer === customer.customerNo ? (
                                                         <Loader2 className="h-3 w-3 animate-spin" />
