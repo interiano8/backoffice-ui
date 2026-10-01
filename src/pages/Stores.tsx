@@ -105,6 +105,9 @@ interface StoreItem {
   telefono?: string;
   correo?: string;
 
+  // Cliente Consumidor Final (configuración central de Casa Matriz 000)
+  noConsumidorFinal?: string;
+
   // POS configuration
   posConfig?: PosConfigData;
   configVersion?: number;
@@ -239,6 +242,7 @@ export const StoresPage: React.FC = () => {
     codigoMoneda: 'HNL',
     telefono: '',
     correo: '',
+    noConsumidorFinal: '',
     posConfig: {
       codigoPos: '01',
       mostrarBombas: true,
@@ -530,6 +534,7 @@ export const StoresPage: React.FC = () => {
       correo: store.correo || '',
       moneda: store.moneda || 'HNL',
       codigoMoneda: store.codigoMoneda || 'HNL',
+      noConsumidorFinal: store.noConsumidorFinal || '',
       apiUrl: store.apiUrl || 'http://127.0.0.1:5012/api',
       dbPort: store.dbPort || 5432,
       dbName: store.dbName || 'prisma',
@@ -576,6 +581,7 @@ export const StoresPage: React.FC = () => {
         payload.titulo = hq.titulo || payload.titulo;
         payload.moneda = hq.moneda || payload.moneda || 'HNL';
         payload.codigoMoneda = hq.codigoMoneda || payload.codigoMoneda || 'HNL';
+        payload.noConsumidorFinal = hq.noConsumidorFinal || payload.noConsumidorFinal || '';
       }
     }
 
@@ -1194,6 +1200,19 @@ export const StoresPage: React.FC = () => {
                       value={form.correo || ''}
                       onChange={(e) => setForm({ ...form, correo: e.target.value })}
                     />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="noConsumidorFinal" className="text-xs font-medium">Código de Consumidor Final (Heredado)</Label>
+                    <Input
+                      id="noConsumidorFinal"
+                      placeholder="Ej. CCO-000-000001"
+                      value={form.noConsumidorFinal || ''}
+                      onChange={(e) => setForm({ ...form, noConsumidorFinal: e.target.value })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Código del cliente de contado que actúa como "Consumidor Final". Se configura una sola vez aquí (Casa Matriz) y se propaga a todas las tiendas tras sincronizar.
+                    </p>
                   </div>
 
                   <div className="col-span-full space-y-1.5">
