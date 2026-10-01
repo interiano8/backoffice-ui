@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Pencil, Check, X, Plus, Trash2, Fuel, RefreshCw, XCircle, Edit2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Fuel, RefreshCw, Edit2 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import api from '@/infrastructure/api/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,6 @@ interface Hose {
   gradeName: string;
   fuelGradeName?: string;
   productName?: string;
-  unitPrice: number | null;
   tankId?: string | null;
   posCode?: string | null;
   genericCode?: string | null;
@@ -36,9 +35,6 @@ export function HosePrices() {
   const { selectedStore } = useAppStore();
   const [hoses, setHoses] = useState<Hose[]>([]);
   const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [savingId, setSavingId] = useState<string | null>(null);
 
   // Hose modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -51,7 +47,6 @@ export function HosePrices() {
     genericCode: 'SUPER',
     gradeId: 1,
     tankId: '1',
-    unitPrice: '',
     active: true,
   });
 
@@ -83,50 +78,19 @@ export function HosePrices() {
     if (selectedStore) fetchHoses();
   }, [selectedStore, fetchHoses]);
 
-  const handleEditInlinePrice = (hose: Hose) => {
-    setEditingId(hose.id);
-    setEditValue(hose.unitPrice != null ? String(hose.unitPrice) : '');
-  };
-
-  const handleSaveInlinePrice = async (id: string) => {
-    const value = parseFloat(editValue);
-    if (isNaN(value) || value < 0) {
-      toast.error('Ingrese un precio válido');
-      return;
-    }
-    setSavingId(id);
-    try {
-      await api.patch(`/hoses/${id}/price`, { unitPrice: value }, {
-        headers: { 'x-store-code': selectedStore?.code },
-      });
-      toast.success('Precio actualizado');
-      setEditingId(null);
-      fetchHoses();
-    } catch {
-      toast.error('Error al actualizar precio');
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const handleCancelInlinePrice = () => {
-    setEditingId(null);
-    setEditValue('');
-  };
-
   const handleOpenAddHose = () => {
     let nextPump = 1;
     let nextHose = 1;
     if (hoses.length > 0) {
-      const maxPump = Math.max(...hoses.map((h) => Number(h.pumpId || 1)));
-      const hosesInMaxPump = hoses.filter((h) => Number(h.pumpId) === maxPump);
-      const maxHoseInPump = Math.max(...hosesInMaxPump.map((h) => Number(h.hoseId || 1)));
-      if (maxHoseInPump >= 4) {
+      const maxPump = Math.max(...hoses.map((h) => h.pumpId || 1));
+      const pumpHoses = hoses.filter((h) => h.pumpId === maxPump);
+      const maxHose = pumpHoses.length > 0 ? Math.max(...pumpHoses.map((h) => h.hoseId || 1)) : 0;
+      if (maxHose >= 3) {
         nextPump = maxPump + 1;
         nextHose = 1;
       } else {
         nextPump = maxPump;
-        nextHose = maxHoseInPump + 1;
+        nextHose = maxHose + 1;
       }
     }
     const firstProd = catalogProducts[0] || DEFAULT_FUEL_PRODUCTS[0];
@@ -139,7 +103,6 @@ export function HosePrices() {
       genericCode: firstProd.genericCode,
       gradeId: firstProd.gradeId,
       tankId: firstProd.tankId,
-      unitPrice: '',
       active: true,
     });
     setModalOpen(true);
@@ -158,7 +121,6 @@ export function HosePrices() {
       genericCode: hose.genericCode || hose.posCode || matched.genericCode,
       gradeId: hose.gradeId || matched.gradeId,
       tankId: hose.tankId ? String(hose.tankId) : matched.tankId,
-      unitPrice: hose.unitPrice != null ? String(hose.unitPrice) : '',
       active: hose.active ?? true,
     });
     setModalOpen(true);
@@ -199,12 +161,6 @@ export function HosePrices() {
         tankId: hoseForm.tankId ? String(hoseForm.tankId).trim() : null,
         active: Boolean(hoseForm.active),
       };
-      if (hoseForm.unitPrice !== '') {
-        const price = parseFloat(String(hoseForm.unitPrice));
-        if (!isNaN(price) && price >= 0) {
-          payload.unitPrice = price;
-        }
-      }
 
       if (editingHose?.id) {
         await api.patch(`/hoses/${editingHose.id}`, payload, {
@@ -244,13 +200,27 @@ export function HosePrices() {
     }
   };
 
+  const handleSelectCatalogProduct = (prodId: string) => {
+    setSelectedCatalogId(prodId);
+    const prod = catalogProducts.find((p) => p.id === prodId);
+    if (prod) {
+      setHoseForm((prev) => ({
+        ...prev,
+        gradeName: prod.gradeName,
+        genericCode: prod.genericCode,
+        gradeId: prod.gradeId,
+        tankId: prod.tankId,
+      }));
+    }
+  };
+
   if (!selectedStore) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
+      <div className="flex items-center justify-center h-full">
         <Card className="w-[400px]">
           <CardHeader><CardTitle className="text-center">Seleccione una tienda</CardTitle></CardHeader>
           <CardContent className="text-center text-muted-foreground">
-            Debe seleccionar una sucursal para ver los precios y mangueras.
+            Debe seleccionar una sucursal para ver las mangueras.
           </CardContent>
         </Card>
       </div>
@@ -264,7 +234,7 @@ export function HosePrices() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Fuel className="h-6 w-6 text-primary" />
-            Mangueras y Precios de Combustible
+            Mangueras de Combustible
           </h1>
           <p className="text-muted-foreground text-sm">{selectedStore.name} ({selectedStore.code})</p>
         </div>
@@ -299,11 +269,10 @@ export function HosePrices() {
             <div className="rounded-lg border bg-card overflow-hidden">
               <div className="grid grid-cols-12 gap-2 p-3 bg-muted/40 border-b text-xs font-bold uppercase text-muted-foreground items-center">
                 <div className="col-span-2">Bomba</div>
-                <div className="col-span-1">Manguera</div>
-                <div className="col-span-2">Combustible</div>
+                <div className="col-span-2">Manguera</div>
+                <div className="col-span-3">Combustible</div>
                 <div className="col-span-2">Código POS</div>
                 <div className="col-span-1">Tanque</div>
-                <div className="col-span-2 text-right">Precio Galón</div>
                 <div className="col-span-2 text-center">Acciones</div>
               </div>
               <div className="divide-y">
@@ -315,10 +284,10 @@ export function HosePrices() {
                         <span className="w-2 h-2 rounded-full bg-primary" />
                         Bomba {hose.pumpId}
                       </div>
-                      <div className="col-span-1 font-mono text-sm">
-                        #{hose.hoseId}
+                      <div className="col-span-2 font-mono text-sm">
+                        Manguera #{hose.hoseId}
                       </div>
-                      <div className="col-span-2 text-sm font-medium truncate flex items-center gap-1.5">
+                      <div className="col-span-3 text-sm font-medium truncate flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${
                           gradeLabel.includes('SUPERIOR')
                             ? 'bg-rose-500'
@@ -338,84 +307,28 @@ export function HosePrices() {
                       <div className="col-span-1 font-mono text-xs text-muted-foreground">
                         {hose.tankId ? `T-${hose.tankId}` : '-'}
                       </div>
-                      <div className="col-span-2 text-right font-mono">
-                        {editingId === hose.id ? (
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="h-8 w-full text-right font-mono text-sm inline-block"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveInlinePrice(hose.id);
-                              if (e.key === 'Escape') handleCancelInlinePrice();
-                            }}
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-foreground">
-                            {hose.unitPrice != null ? `L. ${Number(hose.unitPrice).toFixed(2)}` : '-'}
-                          </span>
-                        )}
-                      </div>
                       <div className="col-span-2 flex items-center justify-center gap-1">
-                        {editingId === hose.id ? (
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSaveInlinePrice(hose.id)}
-                              disabled={savingId === hose.id}
-                              className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50"
-                              title="Guardar precio"
-                            >
-                              {savingId === hose.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleCancelInlinePrice}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:bg-muted"
-                              title="Cancelar"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditInlinePrice(hose)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                              title="Editar precio rápido"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenEditHose(hose)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                              title="Editar manguera completa"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setHoseToDelete(hose);
-                                setDeleteConfirmOpen(true);
-                              }}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                              title="Eliminar manguera"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEditHose(hose)}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                          title="Editar manguera"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setHoseToDelete(hose);
+                            setDeleteConfirmOpen(true);
+                          }}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          title="Eliminar manguera"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -426,97 +339,74 @@ export function HosePrices() {
         </CardContent>
       </Card>
 
-      {/* Hose Modal (Add / Edit) */}
+      {/* Modal Add / Edit Hose */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleSaveHoseForm}>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Fuel className="w-5 h-5 text-primary" />
+              <DialogTitle>
                 {editingHose ? 'Editar Bomba / Manguera' : 'Agregar Bomba y Manguera'}
               </DialogTitle>
               <DialogDescription>
-                {editingHose
-                  ? `Modifique la configuración de la bomba ${editingHose.pumpId}, manguera ${editingHose.hoseId}.`
-                  : `Registre un dispensador y manguera de combustible para ${selectedStore.name}.`}
+                Configure los parámetros del dispensador y combustible asignado a la estación.
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="space-y-1.5">
-                <Label htmlFor="h-pumpId" className="text-xs font-medium">Bomba / Dispensador # *</Label>
+                <Label htmlFor="pumpId" className="text-xs font-medium">Bomba # *</Label>
                 <Input
-                  id="h-pumpId"
+                  id="pumpId"
                   type="number"
                   min="1"
-                  placeholder="1"
                   value={hoseForm.pumpId}
                   onChange={(e) => setHoseForm({ ...hoseForm, pumpId: parseInt(e.target.value, 10) || 1 })}
                   required
                 />
-                <p className="text-[11px] text-muted-foreground">Número de dispensador (1, 2, 3...)</p>
+                <p className="text-[11px] text-muted-foreground">Número de bomba / surtidor</p>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="h-hoseId" className="text-xs font-medium">Manguera # *</Label>
+                <Label htmlFor="hoseId" className="text-xs font-medium">Manguera # *</Label>
                 <Input
-                  id="h-hoseId"
+                  id="hoseId"
                   type="number"
                   min="1"
-                  placeholder="1"
                   value={hoseForm.hoseId}
                   onChange={(e) => setHoseForm({ ...hoseForm, hoseId: parseInt(e.target.value, 10) || 1 })}
                   required
                 />
-                <p className="text-[11px] text-muted-foreground">Posición de manguera (1, 2, 3...)</p>
+                <p className="text-[11px] text-muted-foreground">Posición de la manguera</p>
               </div>
 
               <div className="col-span-2 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="h-selectCatalog" className="text-xs font-medium">Producto / Combustible Asignado *</Label>
-                  <span className="text-[10px] text-muted-foreground font-mono">Seleccionado del catálogo</span>
-                </div>
+                <Label className="text-xs font-medium">Combustible / Producto *</Label>
                 <select
-                  id="h-selectCatalog"
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
                   value={selectedCatalogId}
-                  onChange={(e) => {
-                    const prod = catalogProducts.find((p) => p.id === e.target.value);
-                    if (prod) {
-                      setSelectedCatalogId(prod.id);
-                      setHoseForm({
-                        ...hoseForm,
-                        gradeName: prod.gradeName,
-                        genericCode: prod.genericCode,
-                        gradeId: prod.gradeId,
-                        tankId: prod.tankId,
-                      });
-                    }
-                  }}
+                  onChange={(e) => handleSelectCatalogProduct(e.target.value)}
                 >
                   {catalogProducts.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.gradeName} — ({p.genericCode} | Tanque {p.tankId ? `T-${p.tankId}` : '-'})
+                      {p.gradeName} ({p.genericCode})
                     </option>
                   ))}
                 </select>
-
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs flex flex-col gap-1 mt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-foreground">{hoseForm.gradeName}</span>
-                    <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
-                      POS: {hoseForm.genericCode}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground flex gap-3 font-mono pt-0.5">
-                    <span>Tanque: <strong className="text-foreground">{hoseForm.tankId ? `T-${hoseForm.tankId}` : '-'}</strong></span>
-                    <span>Grado #: <strong className="text-foreground">{hoseForm.gradeId}</strong></span>
-                  </div>
-                </div>
+                <p className="text-[11px] text-muted-foreground">Producto de combustible asignado a esta manguera</p>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="h-tankId" className="text-xs font-medium">Tanque Asociado</Label>
+                <Label htmlFor="h-genericCode" className="text-xs font-medium">Código POS / Genérico</Label>
+                <Input
+                  id="h-genericCode"
+                  value={hoseForm.genericCode}
+                  onChange={(e) => setHoseForm({ ...hoseForm, genericCode: e.target.value.toUpperCase() })}
+                />
+                <p className="text-[11px] text-muted-foreground">Ej. SUPER, REGULAR, DIESEL</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="h-tankId" className="text-xs font-medium">Tanque Asignado</Label>
                 <Input
                   id="h-tankId"
                   placeholder="1"
@@ -524,20 +414,6 @@ export function HosePrices() {
                   onChange={(e) => setHoseForm({ ...hoseForm, tankId: e.target.value })}
                 />
                 <p className="text-[11px] text-muted-foreground">Ej. 1, 2, o T-1 (Opcional)</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="h-unitPrice" className="text-xs font-medium">Precio por Galón (L.)</Label>
-                <Input
-                  id="h-unitPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={hoseForm.unitPrice}
-                  onChange={(e) => setHoseForm({ ...hoseForm, unitPrice: e.target.value })}
-                />
-                <p className="text-[11px] text-muted-foreground">Precio en Lempiras</p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
@@ -559,32 +435,30 @@ export function HosePrices() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={savingHose}>
-                {savingHose ? 'Guardando...' : editingHose ? 'Guardar Cambios' : 'Agregar Manguera'}
+                {savingHose ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                {editingHose ? 'Guardar Cambios' : 'Agregar Manguera'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Modal Delete Confirm */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="text-destructive flex items-center gap-2">
-              <XCircle className="w-5 h-5" />
-              Eliminar Manguera
-            </DialogTitle>
+            <DialogTitle>Eliminar Manguera</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar la Manguera #{hoseToDelete?.hoseId} de la Bomba {hoseToDelete?.pumpId} ({hoseToDelete?.gradeName || hoseToDelete?.fuelGradeName})?
-              Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar la Manguera #{hoseToDelete?.hoseId} de la Bomba {hoseToDelete?.pumpId} ({hoseToDelete?.fuelGradeName || hoseToDelete?.productName || hoseToDelete?.gradeName})?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 sm:gap-0 pt-4 border-t">
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleDeleteHose} disabled={deletingHose}>
-              {deletingHose ? 'Eliminando...' : 'Eliminar'}
+              {deletingHose ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Eliminar
             </Button>
           </DialogFooter>
         </DialogContent>
