@@ -28,6 +28,7 @@ interface Hose {
   posCode?: string | null;
   genericCode?: string | null;
   gradeId?: number;
+  unitOfMeasure?: string | null;
   active: boolean;
 }
 
@@ -47,6 +48,7 @@ export function HosePrices() {
     genericCode: 'SUPER',
     gradeId: 1,
     tankId: '1',
+    unitOfMeasure: 'GL',
     active: true,
   });
 
@@ -103,6 +105,7 @@ export function HosePrices() {
       genericCode: firstProd.genericCode,
       gradeId: firstProd.gradeId,
       tankId: firstProd.tankId,
+      unitOfMeasure: 'GL',
       active: true,
     });
     setModalOpen(true);
@@ -121,6 +124,7 @@ export function HosePrices() {
       genericCode: hose.genericCode || hose.posCode || matched.genericCode,
       gradeId: hose.gradeId || matched.gradeId,
       tankId: hose.tankId ? String(hose.tankId) : matched.tankId,
+      unitOfMeasure: hose.unitOfMeasure || 'GL',
       active: hose.active ?? true,
     });
     setModalOpen(true);
@@ -159,6 +163,7 @@ export function HosePrices() {
         posCode: genericCode,
         gradeId: Number(hoseForm.gradeId) || 1,
         tankId: hoseForm.tankId ? String(hoseForm.tankId).trim() : null,
+        unitOfMeasure: hoseForm.unitOfMeasure || 'GL',
         active: Boolean(hoseForm.active),
       };
 
@@ -273,11 +278,13 @@ export function HosePrices() {
                 <div className="col-span-3">Combustible</div>
                 <div className="col-span-2">Código POS</div>
                 <div className="col-span-1">Tanque</div>
-                <div className="col-span-2 text-center">Acciones</div>
+                <div className="col-span-1">Unidad</div>
+                <div className="col-span-1 text-center">Acciones</div>
               </div>
               <div className="divide-y">
                 {hoses.map((hose) => {
                   const gradeLabel = hose.fuelGradeName || hose.productName || hose.gradeName || 'Combustible';
+                  const unitLabel = (hose.unitOfMeasure || 'GL').toUpperCase().startsWith('LT') ? 'LT' : 'GL';
                   return (
                     <div key={hose.id} className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-muted/10 transition-colors">
                       <div className="col-span-2 font-mono text-sm font-semibold flex items-center gap-1.5">
@@ -307,7 +314,16 @@ export function HosePrices() {
                       <div className="col-span-1 font-mono text-xs text-muted-foreground">
                         {hose.tankId ? `T-${hose.tankId}` : '-'}
                       </div>
-                      <div className="col-span-2 flex items-center justify-center gap-1">
+                      <div className="col-span-1">
+                        <span className={`font-mono text-xs px-2 py-0.5 rounded font-semibold ${
+                          unitLabel === 'LT'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                        }`}>
+                          {unitLabel}
+                        </span>
+                      </div>
+                      <div className="col-span-1 flex items-center justify-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -414,6 +430,20 @@ export function HosePrices() {
                   onChange={(e) => setHoseForm({ ...hoseForm, tankId: e.target.value })}
                 />
                 <p className="text-[11px] text-muted-foreground">Ej. 1, 2, o T-1 (Opcional)</p>
+              </div>
+
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="h-unitOfMeasure" className="text-xs font-medium">Unidad de Medida *</Label>
+                <select
+                  id="h-unitOfMeasure"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
+                  value={hoseForm.unitOfMeasure || 'GL'}
+                  onChange={(e) => setHoseForm({ ...hoseForm, unitOfMeasure: e.target.value })}
+                >
+                  <option value="GL">Galones (GL)</option>
+                  <option value="LT">Litros (LT)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">Unidad de volumen despachado por el surtidor</p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
