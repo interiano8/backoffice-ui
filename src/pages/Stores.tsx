@@ -144,6 +144,7 @@ export const StoresPage: React.FC = () => {
     genericCode: 'SUPER',
     gradeId: 1,
     tankId: '1',
+    unitOfMeasure: 'GL',
     active: true,
   });
   const [deleteHoseModalOpen, setDeleteHoseModalOpen] = useState(false);
@@ -310,6 +311,7 @@ export const StoresPage: React.FC = () => {
       genericCode: firstProd.genericCode,
       gradeId: firstProd.gradeId,
       tankId: firstProd.tankId,
+      unitOfMeasure: 'GL',
       active: true,
     });
     setHoseModalOpen(true);
@@ -328,6 +330,7 @@ export const StoresPage: React.FC = () => {
       genericCode: hose.genericCode || hose.posCode || matched.genericCode,
       gradeId: hose.gradeId || matched.gradeId,
       tankId: hose.tankId ? String(hose.tankId) : matched.tankId,
+      unitOfMeasure: hose.unitOfMeasure || 'GL',
       active: hose.active ?? true,
     });
     setHoseModalOpen(true);
@@ -367,6 +370,7 @@ export const StoresPage: React.FC = () => {
         posCode: genericCode,
         gradeId: Number(hoseForm.gradeId) || 1,
         tankId: hoseForm.tankId ? String(hoseForm.tankId).trim() : null,
+        unitOfMeasure: hoseForm.unitOfMeasure || 'GL',
         active: Boolean(hoseForm.active),
       };
 
@@ -1714,6 +1718,7 @@ export const StoresPage: React.FC = () => {
                           <th className="py-2.5 px-3 text-left font-semibold">Combustible / Producto</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Código POS</th>
                           <th className="py-2.5 px-3 text-left font-semibold">Tanque</th>
+                          <th className="py-2.5 px-3 text-center font-semibold">Unidad</th>
                           <th className="py-2.5 px-3 text-center font-semibold">Estado</th>
                           <th className="py-2.5 px-3 text-center font-semibold w-24">Acciones</th>
                         </tr>
@@ -1743,6 +1748,11 @@ export const StoresPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="py-2.5 px-3 font-mono text-muted-foreground">{h.tankId ? `T-${h.tankId}` : '-'}</td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                                {h.unitOfMeasure || 'GL'}
+                              </span>
+                            </td>
                             <td className="py-2.5 px-3 text-center">
                               <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${
                                 h.active !== false
@@ -2021,6 +2031,20 @@ export const StoresPage: React.FC = () => {
                     <span>Grado #: <strong className="text-foreground">{hoseForm.gradeId}</strong></span>
                   </div>
                 </div>
+              </div>
+
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="h-unitOfMeasure" className="text-xs font-medium">Unidad de Medida *</Label>
+                <select
+                  id="h-unitOfMeasure"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={hoseForm.unitOfMeasure || 'GL'}
+                  onChange={(e) => setHoseForm({ ...hoseForm, unitOfMeasure: e.target.value })}
+                >
+                  <option value="GL">Galones (GL)</option>
+                  <option value="LT">Litros (LT)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">Unidad de volumen despachado por el surtidor</p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
