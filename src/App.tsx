@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const AlertsConfigPage = lazy(() => import('./pages/AlertsConfig').then(m => ({ default: m.AlertsConfigPage })));
 const AccountingPage = lazy(() => import('./pages/Accounting').then(m => ({ default: m.AccountingPage })));
+const PaymentMethodsPage = lazy(() => import('./pages/PaymentMethodsPage').then(m => ({ default: m.PaymentMethodsPage })));
 import { AlertsBell } from './components/AlertsBell';
 import { PageLoader } from './components/PageLoader';
 
@@ -64,6 +65,7 @@ import {
   Building2,
   Bell,
   BookOpen,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from "@/lib/utils"
 import { Toaster } from 'sonner';
@@ -111,6 +113,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     { path: '/ctrl', label: 'CTRL', icon: Activity },
     { path: '/documents', label: 'Documentos', icon: Files },
     { path: '/contabilidad', label: 'Contabilidad', icon: BookOpen },
+    { path: '/payment-methods', label: 'Formas de Pago', icon: CreditCard },
     { path: '/tiendas', label: 'Tiendas', icon: Building2 },
     { path: '/users', label: 'Usuarios', icon: UserCog },
     { path: '/customers', label: 'Clientes', icon: Users },
@@ -370,6 +373,7 @@ function AnimatedRoutes() {
             <Route path="/tiendas" element={<StoresPage />} />
             <Route path="/alertas" element={<AlertsConfigPage />} />
             <Route path="/contabilidad" element={<AccountingPage />} />
+            <Route path="/payment-methods" element={<PaymentMethodsPage />} />
           </Routes>
         </Suspense>
       </motion.div>

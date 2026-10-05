@@ -107,6 +107,7 @@ interface StoreItem {
 
   // Cliente Consumidor Final (configuración central de Casa Matriz 000)
   noConsumidorFinal?: string;
+  validarSaldoCredito?: boolean;
 
   // POS configuration
   posConfig?: PosConfigData;
@@ -244,6 +245,7 @@ export const StoresPage: React.FC = () => {
     telefono: '',
     correo: '',
     noConsumidorFinal: '',
+    validarSaldoCredito: true,
     posConfig: {
       codigoPos: '01',
       mostrarBombas: true,
@@ -539,6 +541,7 @@ export const StoresPage: React.FC = () => {
       moneda: store.moneda || 'HNL',
       codigoMoneda: store.codigoMoneda || 'HNL',
       noConsumidorFinal: store.noConsumidorFinal || '',
+      validarSaldoCredito: store.validarSaldoCredito ?? true,
       apiUrl: store.apiUrl || 'http://127.0.0.1:5012/api',
       dbPort: store.dbPort || 5432,
       dbName: store.dbName || 'prisma',
@@ -1364,6 +1367,19 @@ export const StoresPage: React.FC = () => {
                           type="checkbox"
                           checked={form.moduleCustomers !== 0}
                           onChange={(e) => setForm({ ...form, moduleCustomers: e.target.checked ? 1 : 0 })}
+                          className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
+                        />
+                      </div>
+
+                      <div className="col-span-full flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-semibold text-foreground">Validar Saldo de Crédito</div>
+                          <div className="text-xs text-muted-foreground">Validar crédito disponible y bloqueo por morosidad al facturar a crédito</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={form.validarSaldoCredito ?? true}
+                          onChange={(e) => setForm({ ...form, validarSaldoCredito: e.target.checked })}
                           className="h-5 w-5 rounded border-input text-primary focus:ring-primary accent-primary"
                         />
                       </div>
