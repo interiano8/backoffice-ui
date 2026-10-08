@@ -48,7 +48,18 @@ export const getHubURL = (): string => {
 // Crear instancia de axios (sin baseURL fija, se inyecta en cada petición)
 const api = axios.create();
 
-const CENTRAL_ROUTES = ['/users', '/roles', '/permissions', '/alerts', '/tiendas', '/stores', '/customers', '/etl'];
+const CENTRAL_ROUTES = [
+    '/users',
+    '/roles',
+    '/permissions',
+    '/alerts',
+    '/tiendas',
+    '/stores',
+    '/customers',
+    '/etl',
+    '/payment-methods',
+    '/accounting',
+];
 
 // Interceptor para inyectar la URL base dinámica, el token y el x-store-code
 api.interceptors.request.use(
