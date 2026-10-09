@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { getDashboardStats, getMonthlyAnalysis } from '../services/report.service';
 import { cn } from "@/lib/utils"
-import { RefreshCcw, TrendingUp, Download, Loader2 } from 'lucide-react';
+import { RefreshCcw, TrendingUp, Download, Loader2, ShoppingBag, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { downloadConsolidatedReport } from '../services/alerts.service';
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { GALLON_TO_LITER } from "@/lib/constants";
 import type { DashboardData, MonthlyData } from "../types/api";
@@ -208,45 +209,126 @@ export const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            <DashboardProductCards products={data?.products || []} formatCurrency={formatCurrency} />
+            {/* VISTA RETAIL O ESTACIÓN */}
+            {selectedStore?.businessType === 'RETAIL' ? (
+                /* === MODO TIENDA / RETAIL PURO === */
+                <div className="space-y-8">
+                    {/* Tarjetas KPI Retail */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Card className="border border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Venta Mercancía Total</p>
+                                    <p className="text-2xl font-bold font-mono tracking-tight text-foreground">
+                                        {formatCurrency(
+                                            (data?.otherProducts?.reduce((sum, p) => sum + (p.totalAmount || 0), 0) || data?.totalAmount || 0)
+                                        )}
+                                    </p>
+                                </div>
+                                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                    <ShoppingBag className="h-5 w-5" />
+                                </div>
+                            </CardContent>
+                        </Card>
 
-            {isMounted && data && data.products?.length > 0 && (
-                <div className="flex flex-col gap-8">
-                    <DashboardVolumeChart
+                        <Card className="border border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Artículos en Catálogo Vendidos</p>
+                                    <p className="text-2xl font-bold font-mono tracking-tight text-foreground">
+                                        {(data?.otherProducts?.length || 0).toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                                    <Receipt className="h-5 w-5" />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unidades Despachadas</p>
+                                    <p className="text-2xl font-bold font-mono tracking-tight text-foreground">
+                                        {(data?.otherProducts?.reduce((sum, p) => sum + (p.totalVolume || 0), 0) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    </p>
+                                </div>
+                                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                    <TrendingUp className="h-5 w-5" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Ventas de mercancía / otros productos prioritario */}
+                    <DashboardOtherProducts
                         data={data}
-                        metric={metric}
-                        onMetricChange={setMetric}
-                        startDate={startDate}
-                        endDate={endDate}
-                        getChartData={getChartData}
-                    />
-                    <DashboardPumpMonitor
-                        pumps={data.pumps || []}
-                        totalVolume={data.totalVolume || 0}
-                        totalVolumeGL={data.totalVolumeGL || 0}
-                        totalAmount={data.totalAmount || 0}
+                        otherMetric={otherMetric}
+                        onOtherMetricChange={setOtherMetric}
                         formatCurrency={formatCurrency}
                     />
-                    <DashboardHourlyChart
-                        hourly={data.hourly || []}
-                        products={data.products || []}
-                    />
+
+                    {/* Métodos de Pago */}
                     <DashboardPaymentCards
-                        paymentMethods={data.paymentMethods || []}
+                        paymentMethods={data?.paymentMethods || []}
                         paymentMetric={paymentMetric}
                         onMetricChange={setPaymentMetric}
                     />
+
+                    {/* Desglose por Hora */}
+                    {data?.hourly && data.hourly.length > 0 && (
+                        <DashboardHourlyChart
+                            hourly={data.hourly}
+                            products={data.products || []}
+                        />
+                    )}
                 </div>
+            ) : (
+                /* === MODO ESTACIÓN DE COMBUSTIBLE === */
+                <>
+                    <DashboardProductCards products={data?.products || []} formatCurrency={formatCurrency} />
+
+                    {isMounted && data && data.products?.length > 0 && (
+                        <div className="flex flex-col gap-8">
+                            <DashboardVolumeChart
+                                data={data}
+                                metric={metric}
+                                onMetricChange={setMetric}
+                                startDate={startDate}
+                                endDate={endDate}
+                                getChartData={getChartData}
+                            />
+                            <DashboardPumpMonitor
+                                pumps={data.pumps || []}
+                                totalVolume={data.totalVolume || 0}
+                                totalVolumeGL={data.totalVolumeGL || 0}
+                                totalAmount={data.totalAmount || 0}
+                                formatCurrency={formatCurrency}
+                            />
+                            <DashboardHourlyChart
+                                hourly={data.hourly || []}
+                                products={data.products || []}
+                            />
+                            <DashboardPaymentCards
+                                paymentMethods={data.paymentMethods || []}
+                                paymentMetric={paymentMetric}
+                                onMetricChange={setPaymentMetric}
+                            />
+                        </div>
+                    )}
+                </>
             )}
 
             <div className="space-y-6 pb-12">
                 <DashboardTables data={data} />
-                <DashboardOtherProducts
-                    data={data}
-                    otherMetric={otherMetric}
-                    onOtherMetricChange={setOtherMetric}
-                    formatCurrency={formatCurrency}
-                />
+                {selectedStore?.businessType !== 'RETAIL' && (
+                    <DashboardOtherProducts
+                        data={data}
+                        otherMetric={otherMetric}
+                        onOtherMetricChange={setOtherMetric}
+                        formatCurrency={formatCurrency}
+                    />
+                )}
 
                 {!loadingMonthly && monthlyData && (
                     <DashboardComparativeAnalysis
