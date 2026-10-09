@@ -132,6 +132,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
       const role = (user?.role || '').toUpperCase();
       return role.includes('ADMIN') || role === 'SUPERADMIN';
     }
+    if (item.path === '/ctrl' || item.path === '/reconciliation') {
+      return selectedStore?.businessType !== 'RETAIL';
+    }
     return true;
   });
 

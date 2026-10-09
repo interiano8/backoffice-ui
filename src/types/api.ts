@@ -30,6 +30,7 @@ export interface Store {
   printCreditInvoices?: boolean;
   SyncMinutes?: number;
   PresentationMinutes?: number;
+  businessType?: 'GAS_STATION' | 'RETAIL';
 }
 
 export interface Shift {

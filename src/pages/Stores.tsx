@@ -97,6 +97,7 @@ interface StoreItem {
   urlControlador?: string;
   claveControlador?: string;
   esControladorGas?: boolean;
+  businessType?: 'GAS_STATION' | 'RETAIL';
 
   // General parameters
   emisor?: string;
@@ -239,6 +240,7 @@ export const StoresPage: React.FC = () => {
     urlControlador: 'http://localhost:5008',
     claveControlador: '',
     esControladorGas: false,
+    businessType: 'GAS_STATION',
     emisor: '',
     moneda: 'HNL',
     codigoMoneda: 'HNL',
@@ -535,6 +537,7 @@ export const StoresPage: React.FC = () => {
       urlControlador: store.urlControlador || 'http://localhost:5008',
       claveControlador: store.claveControlador || '',
       esControladorGas: store.esControladorGas ?? false,
+      businessType: store.businessType || (store.esControladorGas ? 'GAS_STATION' : 'GAS_STATION'),
       emisor: store.emisor || '',
       telefono: store.telefono || '',
       correo: store.correo || '',
@@ -1051,16 +1054,18 @@ export const StoresPage: React.FC = () => {
                 <Building2 className="w-3.5 h-3.5" />
                 General
               </Button>
-              <Button
-                type="button"
-                variant={activeTab === 'wayne' ? 'default' : 'outline'}
-                size="sm"
-                className="gap-1.5 text-xs h-8 shrink-0"
-                onClick={() => setActiveTab('wayne')}
-              >
-                <Cpu className="w-3.5 h-3.5" />
-                Controlador
-              </Button>
+              {form.businessType !== 'RETAIL' && (
+                <Button
+                  type="button"
+                  variant={activeTab === 'wayne' ? 'default' : 'outline'}
+                  size="sm"
+                  className="gap-1.5 text-xs h-8 shrink-0"
+                  onClick={() => setActiveTab('wayne')}
+                >
+                  <Cpu className="w-3.5 h-3.5" />
+                  Controlador
+                </Button>
+              )}
               <Button
                 type="button"
                 variant={activeTab === 'pos' ? 'default' : 'outline'}
@@ -1071,19 +1076,21 @@ export const StoresPage: React.FC = () => {
                 <Sliders className="w-3.5 h-3.5" />
                 Configuración POS
               </Button>
-              <Button
-                type="button"
-                variant={activeTab === 'hoses' ? 'default' : 'outline'}
-                size="sm"
-                className="gap-1.5 text-xs h-8 shrink-0"
-                onClick={() => {
-                  setActiveTab('hoses');
-                  if (form.code) loadStoreHoses(form.code);
-                }}
-              >
-                <Fuel className="w-3.5 h-3.5" />
-                Mangueras
-              </Button>
+              {form.businessType !== 'RETAIL' && (
+                <Button
+                  type="button"
+                  variant={activeTab === 'hoses' ? 'default' : 'outline'}
+                  size="sm"
+                  className="gap-1.5 text-xs h-8 shrink-0"
+                  onClick={() => {
+                    setActiveTab('hoses');
+                    if (form.code) loadStoreHoses(form.code);
+                  }}
+                >
+                  <Fuel className="w-3.5 h-3.5" />
+                  Mangueras
+                </Button>
+              )}
               <Button
                 type="button"
                 variant={activeTab === 'db' ? 'default' : 'outline'}
@@ -1310,15 +1317,33 @@ export const StoresPage: React.FC = () => {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="name" className="text-xs font-medium">Nombre de la Sucursal / Estación *</Label>
+                        <Label htmlFor="name" className="text-xs font-medium">Nombre de la Sucursal / Tienda *</Label>
                         <Input
                           id="name"
-                          placeholder="Ej. ESTACIÓN EL RECREO"
+                          placeholder="Ej. TIENDA DE CONVENIENCIA NORTE"
                           value={form.name}
                           onChange={(e) => setForm({ ...form, name: e.target.value })}
                           required
                         />
-                        <p className="text-[11px] text-muted-foreground">Nombre descriptivo de esta estación.</p>
+                        <p className="text-[11px] text-muted-foreground">Nombre descriptivo de esta sucursal.</p>
+                      </div>
+
+                      <div className="col-span-full space-y-1.5">
+                        <Label htmlFor="businessType" className="text-xs font-medium">Giro de Negocio / Tipo de Sucursal *</Label>
+                        <select
+                          id="businessType"
+                          value={form.businessType || 'GAS_STATION'}
+                          onChange={(e) => setForm({ ...form, businessType: e.target.value as 'GAS_STATION' | 'RETAIL' })}
+                          className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="GAS_STATION">⛽ Estación de Combustible (Con o sin pista)</option>
+                          <option value="RETAIL">🏪 Tienda / Retail Puro (Sin bombas de combustible)</option>
+                        </select>
+                        <p className="text-[11px] text-muted-foreground">
+                          {form.businessType === 'RETAIL' 
+                            ? 'Modo Retail: Oculta bombas, mangueras, tanques y monitoreo Wayne Fusion tanto en POS como en BackOffice.'
+                            : 'Modo Estación: Habilita el ecosistema completo de despacho de combustible, mangueras y tanques.'}
+                        </p>
                       </div>
 
                       <div className="col-span-full space-y-1.5">
