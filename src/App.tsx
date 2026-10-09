@@ -128,6 +128,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
       }
       return selectedStore?.moduleAccounting !== 0;
     }
+    if (item.path === '/payment-methods') {
+      const role = (user?.role || '').toUpperCase();
+      return role.includes('ADMIN') || role === 'SUPERADMIN';
+    }
     return true;
   });
 
