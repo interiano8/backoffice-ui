@@ -59,6 +59,8 @@ const CENTRAL_ROUTES = [
     '/etl',
     '/payment-methods',
     '/accounting',
+    '/transfers',
+    '/inventory',
 ];
 
 // Interceptor para inyectar la URL base dinámica, el token y el x-store-code
