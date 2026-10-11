@@ -10,8 +10,12 @@ import {
   CheckCircle2,
   XCircle,
   Building,
+  Search,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import api from '@/infrastructure/api/api-client';
+import { accountingService, AccountItem } from '@/services/accounting.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +70,12 @@ export function PaymentMethodsPage() {
   // Formas de Pago state
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [stores, setStores] = useState<StoreItem[]>([]);
+  const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [loadingMethods, setLoadingMethods] = useState(false);
+
+  // Selector de cuenta contable desplegable con buscador
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [accountSearch, setAccountSearch] = useState('');
 
   // Modal crear/editar forma de pago
   const [methodModalOpen, setMethodModalOpen] = useState(false);
@@ -114,10 +123,11 @@ export function PaymentMethodsPage() {
     setLoadingMethods(true);
     setLoadingRates(true);
     try {
-      const [pmRes, rateRes, storeRes] = await Promise.allSettled([
+      const [pmRes, rateRes, storeRes, accRes] = await Promise.allSettled([
         api.get('/payment-methods'),
         api.get('/payment-methods/exchange-rates'),
         api.get('/stores'),
+        accountingService.getAccounts({ allowsMovement: true }),
       ]);
 
       if (pmRes.status === 'fulfilled') {
@@ -128,6 +138,9 @@ export function PaymentMethodsPage() {
       }
       if (storeRes.status === 'fulfilled') {
         setStores(storeRes.value.data || []);
+      }
+      if (accRes.status === 'fulfilled') {
+        setAccounts(accRes.value || []);
       }
     } catch {
       toast.error('Error cargando catálogo de formas de pago y tasas de cambio');
@@ -144,6 +157,8 @@ export function PaymentMethodsPage() {
   // Handlers Métodos de Pago
   const handleOpenCreateMethod = () => {
     setEditingMethod(null);
+    setAccountSearch('');
+    setAccountDropdownOpen(false);
     setMethodForm({
       description: '',
       category: 'TARJETA',
@@ -164,6 +179,8 @@ export function PaymentMethodsPage() {
 
   const handleOpenEditMethod = (pm: PaymentMethod) => {
     setEditingMethod(pm);
+    setAccountSearch('');
+    setAccountDropdownOpen(false);
     setMethodForm({
       description: pm.description,
       category: pm.category || 'EFECTIVO',
@@ -463,8 +480,20 @@ export function PaymentMethodsPage() {
                       <td className="p-3 font-mono font-bold">
                         {pm.commissionPct != null ? `${Number(pm.commissionPct).toFixed(2)}%` : '0.00%'}
                       </td>
-                      <td className="p-3 font-mono text-muted-foreground">
-                        {pm.accountId || '—'}
+                      <td className="p-3 font-mono text-muted-foreground text-xs">
+                        {(() => {
+                          if (!pm.accountId) return '—';
+                          const matched = accounts.find((a) => a.id === pm.accountId || a.code === pm.accountId);
+                          if (matched) {
+                            return (
+                              <span title={`${matched.code} - ${matched.name}`}>
+                                <strong className="text-foreground">{matched.code}</strong>{' '}
+                                <span className="text-[11px] text-muted-foreground hidden sm:inline">({matched.name})</span>
+                              </span>
+                            );
+                          }
+                          return pm.accountId;
+                        })()}
                       </td>
                       <td className="p-3">
                         <Button
@@ -665,14 +694,133 @@ export function PaymentMethodsPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="acc" className="text-xs font-semibold">Cuenta Contable (ID/Código)</Label>
-                <Input
-                  id="acc"
-                  placeholder="Ej. 1102-01"
-                  value={methodForm.accountId}
-                  onChange={(e) => setMethodForm({ ...methodForm, accountId: e.target.value })}
-                />
+              <div className="space-y-1.5 relative">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="acc" className="text-xs font-semibold">Cuenta Contable (Catálogo)</Label>
+                  {methodForm.accountId && (
+                    <button
+                      type="button"
+                      onClick={() => setMethodForm({ ...methodForm, accountId: '' })}
+                      className="text-[10px] text-muted-foreground hover:text-destructive underline"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                {/* Botón trigger del desplegable */}
+                <div
+                  onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                  className="flex items-center justify-between w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm cursor-pointer hover:bg-muted/30 transition-colors"
+                >
+                  <span className="truncate">
+                    {(() => {
+                      if (!methodForm.accountId) return <span className="text-muted-foreground">-- Seleccionar Cuenta Contable --</span>;
+                      const selected = accounts.find((a) => a.id === methodForm.accountId || a.code === methodForm.accountId);
+                      if (selected) {
+                        return (
+                          <span className="font-mono font-medium text-foreground">
+                            {selected.code} - {selected.name}
+                          </span>
+                        );
+                      }
+                      return <span className="font-mono text-foreground">{methodForm.accountId}</span>;
+                    })()}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${accountDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+
+                {/* Menú desplegable flotante con buscador */}
+                {accountDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setAccountDropdownOpen(false)}
+                    />
+                    <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-xl max-h-60 overflow-hidden flex flex-col">
+                      {/* Caja de búsqueda */}
+                      <div className="p-2 border-b border-border/60 bg-muted/20 flex items-center gap-1.5">
+                        <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Buscar código o nombre de cuenta..."
+                          value={accountSearch}
+                          onChange={(e) => setAccountSearch(e.target.value)}
+                          className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        {accountSearch && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAccountSearch('');
+                            }}
+                            className="text-[10px] text-muted-foreground hover:text-foreground px-1"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Lista de opciones filtradas */}
+                      <div className="overflow-y-auto max-h-48 py-1 divide-y divide-border/20">
+                        <div
+                          className="px-3 py-2 text-xs text-muted-foreground hover:bg-muted/40 cursor-pointer flex items-center justify-between"
+                          onClick={() => {
+                            setMethodForm({ ...methodForm, accountId: '' });
+                            setAccountDropdownOpen(false);
+                          }}
+                        >
+                          <span>(Ninguna cuenta asignada)</span>
+                          {!methodForm.accountId && <Check className="w-3.5 h-3.5 text-primary" />}
+                        </div>
+
+                        {accounts
+                          .filter((acc) => {
+                            if (!accountSearch.trim()) return true;
+                            const query = accountSearch.toLowerCase();
+                            return (
+                              acc.code.toLowerCase().includes(query) ||
+                              acc.name.toLowerCase().includes(query)
+                            );
+                          })
+                          .map((acc) => {
+                            const isSelected = methodForm.accountId === acc.id || methodForm.accountId === acc.code;
+                            return (
+                              <div
+                                key={acc.id}
+                                className={`px-3 py-2 text-xs cursor-pointer hover:bg-primary/10 transition-colors flex items-center justify-between ${
+                                  isSelected ? 'bg-primary/15 font-semibold text-primary' : 'text-foreground'
+                                }`}
+                                onClick={() => {
+                                  setMethodForm({ ...methodForm, accountId: acc.code });
+                                  setAccountDropdownOpen(false);
+                                }}
+                              >
+                                <div className="flex flex-col truncate pr-2">
+                                  <span className="font-mono text-[11px]">{acc.code}</span>
+                                  <span className="truncate text-muted-foreground">{acc.name}</span>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                              </div>
+                            );
+                          })}
+
+                        {accounts.filter((acc) => {
+                          if (!accountSearch.trim()) return true;
+                          const query = accountSearch.toLowerCase();
+                          return acc.code.toLowerCase().includes(query) || acc.name.toLowerCase().includes(query);
+                        }).length === 0 && (
+                          <div className="p-3 text-center text-xs text-muted-foreground">
+                            No se encontraron cuentas con "{accountSearch}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
