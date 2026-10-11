@@ -33,7 +33,7 @@ export interface TestAlertResult {
 
 export interface OperationalAlertItem {
   id: string;
-  type: 'SHIFT_DISCREPANCY' | 'FISCAL_GAP' | 'OFFLINE_STORE';
+  type: 'SHIFT_DISCREPANCY' | 'FISCAL_GAP' | 'OFFLINE_STORE' | 'STOCK_TRANSFER' | 'LOW_STOCK';
   severity: 'CRITICAL' | 'WARNING';
   title: string;
   description: string;
@@ -42,6 +42,7 @@ export interface OperationalAlertItem {
   link: string;
   metadata?: Record<string, any>;
 }
+
 
 export interface RecentAlertsResponse {
   total: number;

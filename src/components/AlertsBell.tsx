@@ -8,8 +8,11 @@ import {
   ExternalLink, 
   Settings, 
   Check, 
-  RefreshCw 
+  RefreshCw,
+  ArrowRightLeft,
+  PackageX,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -72,8 +75,15 @@ export const AlertsBell: React.FC = () => {
     if (type === 'OFFLINE_STORE') {
       return <ServerOff className="h-4 w-4 text-amber-500 shrink-0" />;
     }
+    if (type === 'STOCK_TRANSFER') {
+      return <ArrowRightLeft className="h-4 w-4 text-blue-500 shrink-0" />;
+    }
+    if (type === 'LOW_STOCK') {
+      return <PackageX className={`h-4 w-4 shrink-0 ${severity === 'CRITICAL' ? 'text-red-500' : 'text-amber-500'}`} />;
+    }
     return <AlertTriangle className={`h-4 w-4 shrink-0 ${severity === 'CRITICAL' ? 'text-red-500' : 'text-amber-500'}`} />;
   };
+
 
   return (
     <div className="relative" ref={dropdownRef}>
