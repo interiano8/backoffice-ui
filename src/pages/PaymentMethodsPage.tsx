@@ -13,6 +13,8 @@ import {
   Search,
   ChevronDown,
   Check,
+  ImageIcon,
+  Upload,
 } from 'lucide-react';
 import api from '@/infrastructure/api/api-client';
 import { accountingService, AccountItem } from '@/services/accounting.service';
@@ -95,6 +97,7 @@ export function PaymentMethodsPage() {
     requiresReference: false,
     active: true,
     accountId: '',
+    image: '' as string,
     commissionPct: '0.00',
     storeCodes: [] as string[],
   });
@@ -171,6 +174,7 @@ export function PaymentMethodsPage() {
       requiresReference: true,
       active: true,
       accountId: '',
+      image: '',
       commissionPct: '2.50',
       storeCodes: stores.map((s) => s.code),
     });
@@ -193,10 +197,38 @@ export function PaymentMethodsPage() {
       requiresReference: pm.requiresReference ?? false,
       active: pm.active ?? true,
       accountId: pm.accountId || '',
+      image: pm.image || '',
       commissionPct: pm.commissionPct != null ? String(pm.commissionPct) : '0.00',
       storeCodes: pm.storeCodes || [],
     });
     setMethodModalOpen(true);
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('El archivo seleccionado debe ser una imagen (PNG, JPG, SVG, etc.)');
+      return;
+    }
+
+    // Máximo 1MB para mantener ligeras las descargas en POS
+    if (file.size > 1024 * 1024) {
+      toast.error('La imagen no debe superar 1MB de tamaño.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setMethodForm((prev) => ({ ...prev, image: result }));
+      toast.success('Imagen cargada correctamente');
+    };
+    reader.onerror = () => {
+      toast.error('Error al leer la imagen seleccionada');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveMethod = async (e: React.FormEvent) => {
@@ -220,6 +252,7 @@ export function PaymentMethodsPage() {
         requiresReference: methodForm.requiresReference,
         active: methodForm.active,
         accountId: methodForm.accountId.trim() || undefined,
+        image: methodForm.image ? methodForm.image.trim() : undefined,
         commissionPct: Number(methodForm.commissionPct) || 0,
         storeCodes: methodForm.storeCodes,
       };
@@ -462,7 +495,25 @@ export function PaymentMethodsPage() {
                   {methods.map((pm) => (
                     <tr key={pm.code} className="hover:bg-muted/20 transition-colors">
                       <td className="p-3 font-mono font-bold text-primary">{pm.code}</td>
-                      <td className="p-3 font-semibold text-foreground">{pm.description}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          {pm.image ? (
+                            <img
+                              src={pm.image}
+                              alt=""
+                              className="w-6 h-6 rounded border border-border object-contain bg-white shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded border border-border/40 bg-muted/40 flex items-center justify-center shrink-0">
+                              <CreditCard className="w-3.5 h-3.5 text-muted-foreground/50" />
+                            </div>
+                          )}
+                          <span className="font-semibold text-foreground">{pm.description}</span>
+                        </div>
+                      </td>
                       <td className="p-3">
                         <Badge variant="outline" className="font-mono text-[10px] uppercase">
                           {pm.category} ({pm.currency})
@@ -821,6 +872,65 @@ export function PaymentMethodsPage() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+            {/* Configuración de Imagen / Icono de la Forma de Pago */}
+            <div className="space-y-1.5 border-t pt-3">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                Imagen / Logo de Forma de Pago (POS)
+              </Label>
+              <div className="flex items-center gap-3">
+                {/* Preview de la imagen */}
+                <div className="w-14 h-14 rounded-lg border border-border/80 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                  {methodForm.image ? (
+                    <img
+                      src={methodForm.image}
+                      alt="Preview"
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '';
+                      }}
+                    />
+                  ) : (
+                    <CreditCard className="w-6 h-6 text-muted-foreground/40" />
+                  )}
+                </div>
+
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-input bg-background hover:bg-muted/50 transition-colors shadow-sm">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Subir archivo...</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageFileChange}
+                      />
+                    </label>
+                    {methodForm.image && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                        onClick={() => setMethodForm((prev) => ({ ...prev, image: '' }))}
+                      >
+                        Quitar imagen
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    placeholder="O ingresa URL directa (https://... o /images/...)"
+                    value={methodForm.image}
+                    onChange={(e) => setMethodForm({ ...methodForm, image: e.target.value })}
+                    className="text-xs font-mono h-7"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Esta imagen se mostrará en los botones del POS al cobrar en caja.
+                  </p>
+                </div>
               </div>
             </div>
 
