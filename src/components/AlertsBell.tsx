@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   getRecentAlerts, 
-  RecentAlertsResponse 
+  RecentAlertsResponse,
+  createAlertsEventSource,
 } from '../services/alerts.service';
 
 export const AlertsBell: React.FC = () => {
@@ -46,8 +47,28 @@ export const AlertsBell: React.FC = () => {
 
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 60000); // Polling cada 60s
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchAlerts, 60000); // Polling cada 60s como respaldo
+
+    // Conexión Server-Sent Events en tiempo real
+    const cleanupSSE = createAlertsEventSource((newAlert) => {
+      setData((prev) => {
+        const exists = prev.alerts.some((a) => a.id === newAlert.id);
+        if (exists) return prev;
+        const isCritical = newAlert.severity === 'CRITICAL';
+        return {
+          ...prev,
+          total: prev.total + 1,
+          criticalCount: isCritical ? prev.criticalCount + 1 : prev.criticalCount,
+          warningCount: !isCritical ? prev.warningCount + 1 : prev.warningCount,
+          alerts: [newAlert, ...prev.alerts],
+        };
+      });
+    });
+
+    return () => {
+      clearInterval(interval);
+      cleanupSSE();
+    };
   }, []);
 
   // Cerrar dropdown al hacer click fuera
@@ -72,11 +93,14 @@ export const AlertsBell: React.FC = () => {
     if (type === 'FISCAL_GAP') {
       return <ShieldAlert className="h-4 w-4 text-red-500 shrink-0" />;
     }
-    if (type === 'OFFLINE_STORE') {
+    if (type === 'OFFLINE_STORE' || type === 'STATION_STATUS') {
       return <ServerOff className="h-4 w-4 text-amber-500 shrink-0" />;
     }
     if (type === 'STOCK_TRANSFER') {
       return <ArrowRightLeft className="h-4 w-4 text-blue-500 shrink-0" />;
+    }
+    if (type === 'TRANSFER_DISCREPANCY') {
+      return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 animate-bounce" />;
     }
     if (type === 'LOW_STOCK') {
       return <PackageX className={`h-4 w-4 shrink-0 ${severity === 'CRITICAL' ? 'text-red-500' : 'text-amber-500'}`} />;

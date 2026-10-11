@@ -24,6 +24,7 @@ const TransfersPage = lazy(() => import('./pages/TransfersPage').then(m => ({ de
 const InventoryAuditsPage = lazy(() => import('./pages/InventoryAuditsPage').then(m => ({ default: m.InventoryAuditsPage })));
 const PromotionsPage = lazy(() => import('./pages/PromotionsPage').then(m => ({ default: m.PromotionsPage })));
 import { AlertsBell } from './components/AlertsBell';
+import { StationHealthWidget } from './components/StationHealthWidget';
 import { PageLoader } from './components/PageLoader';
 
 import { useAppStore } from './store/useAppStore';
@@ -332,6 +333,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 />
               </div>
             )}
+
+            {/* Semáforo de Telemetría de Estaciones POS */}
+            <StationHealthWidget />
 
             {/* Campana de Alertas Operativas */}
             <AlertsBell />

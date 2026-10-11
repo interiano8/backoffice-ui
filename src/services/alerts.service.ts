@@ -33,8 +33,15 @@ export interface TestAlertResult {
 
 export interface OperationalAlertItem {
   id: string;
-  type: 'SHIFT_DISCREPANCY' | 'FISCAL_GAP' | 'OFFLINE_STORE' | 'STOCK_TRANSFER' | 'LOW_STOCK';
-  severity: 'CRITICAL' | 'WARNING';
+  type:
+    | 'SHIFT_DISCREPANCY'
+    | 'FISCAL_GAP'
+    | 'OFFLINE_STORE'
+    | 'STOCK_TRANSFER'
+    | 'LOW_STOCK'
+    | 'TRANSFER_DISCREPANCY'
+    | 'STATION_STATUS';
+  severity: 'CRITICAL' | 'WARNING' | 'INFO';
   title: string;
   description: string;
   storeCode: string;
@@ -43,12 +50,36 @@ export interface OperationalAlertItem {
   metadata?: Record<string, any>;
 }
 
-
 export interface RecentAlertsResponse {
   total: number;
   criticalCount: number;
   warningCount: number;
   alerts: OperationalAlertItem[];
+}
+
+export function createAlertsEventSource(
+  onAlert: (alert: OperationalAlertItem) => void,
+): () => void {
+  const token = localStorage.getItem('token') || '';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const cleanBase = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
+  const streamPath = cleanBase ? `${cleanBase}/alerts/stream` : '/alerts/stream';
+  const url = `${streamPath}?token=${encodeURIComponent(token)}`;
+
+  const eventSource = new EventSource(url);
+
+  eventSource.onmessage = (event) => {
+    try {
+      const parsed = JSON.parse(event.data) as OperationalAlertItem;
+      onAlert(parsed);
+    } catch {
+      // Ignorar fallo de parseo
+    }
+  };
+
+  return () => {
+    eventSource.close();
+  };
 }
 
 export async function getAlertConfig(): Promise<AlertConfig> {

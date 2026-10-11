@@ -14,7 +14,7 @@ export interface StockTransfer {
   transferNo: string;
   fromStoreCode: string;
   toStoreCode: string;
-  status: 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
+  status: 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'RECEIVED_WITH_DISCREPANCY' | 'CANCELLED';
   requestedBy: string;
   approvedBy?: string;
   dispatchedBy?: string;
@@ -60,8 +60,21 @@ export const transfersService = {
     return res.data;
   },
 
-  receiveTransfer: async (id: string, receivedBy?: string): Promise<StockTransfer> => {
-    const res = await api.patch(`/transfers/${id}/receive`, { receivedBy });
+  receiveTransfer: async (
+    id: string,
+    data?: {
+      receivedBy?: string;
+      discrepancyReason?: string;
+      discrepancyNotes?: string;
+      items?: Array<{
+        productCode: string;
+        quantity: number;
+        reason?: string;
+        notes?: string;
+      }>;
+    },
+  ): Promise<StockTransfer> => {
+    const res = await api.patch(`/transfers/${id}/receive`, data || {});
     return res.data;
   },
 
