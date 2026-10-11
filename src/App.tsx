@@ -22,6 +22,7 @@ const AccountingPage = lazy(() => import('./pages/Accounting').then(m => ({ defa
 const PaymentMethodsPage = lazy(() => import('./pages/PaymentMethodsPage').then(m => ({ default: m.PaymentMethodsPage })));
 const TransfersPage = lazy(() => import('./pages/TransfersPage').then(m => ({ default: m.TransfersPage })));
 const InventoryAuditsPage = lazy(() => import('./pages/InventoryAuditsPage').then(m => ({ default: m.InventoryAuditsPage })));
+const PromotionsPage = lazy(() => import('./pages/PromotionsPage').then(m => ({ default: m.PromotionsPage })));
 import { AlertsBell } from './components/AlertsBell';
 import { PageLoader } from './components/PageLoader';
 
@@ -70,7 +71,9 @@ import {
   CreditCard,
   ArrowRightLeft,
   ClipboardCheck,
+  Tag,
 } from 'lucide-react';
+
 
 import { cn } from "@/lib/utils"
 import { Toaster } from 'sonner';
@@ -120,7 +123,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
     { path: '/contabilidad', label: 'Contabilidad', icon: BookOpen },
     { path: '/transfers', label: 'Traspasos', icon: ArrowRightLeft },
     { path: '/inventory-audits', label: 'Auditoría / Mermas', icon: ClipboardCheck },
+    { path: '/promotions', label: 'Promociones / Combos', icon: Tag },
     { path: '/payment-methods', label: 'Formas de Pago', icon: CreditCard },
+
 
     { path: '/tiendas', label: 'Tiendas', icon: Building2 },
     { path: '/users', label: 'Usuarios', icon: UserCog },
@@ -390,7 +395,9 @@ function AnimatedRoutes() {
             <Route path="/contabilidad" element={<AccountingPage />} />
             <Route path="/transfers" element={<TransfersPage />} />
             <Route path="/inventory-audits" element={<InventoryAuditsPage />} />
+            <Route path="/promotions" element={<PromotionsPage />} />
             <Route path="/payment-methods" element={<PaymentMethodsPage />} />
+
 
           </Routes>
         </Suspense>
