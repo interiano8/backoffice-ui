@@ -75,4 +75,33 @@ export const inventoryAuditService = {
     const res = await api.patch(`/inventory/counts/${id}/cancel`, { notes });
     return res.data;
   },
+
+  getLowStockAlerts: async (storeCode?: string): Promise<LowStockAlertItem[]> => {
+    const res = await api.get('/inventory/alerts/low-stock', {
+      params: storeCode ? { storeCode } : undefined,
+    });
+    return res.data;
+  },
+
+  updateThresholds: async (
+    storeCode: string,
+    items: Array<{ productCode: string; minStock: number }>,
+  ): Promise<any> => {
+    const res = await api.put('/inventory/thresholds', { storeCode, items });
+    return res.data;
+  },
 };
+
+export interface LowStockAlertItem {
+  id: string;
+  storeCode: string;
+  storeName: string;
+  productCode: string;
+  productName?: string;
+  stock: number;
+  minStock: number;
+  criticality: 'OUT_OF_STOCK' | 'CRITICAL' | 'WARNING';
+  suggestedReorder: number;
+  updatedAt: string;
+}
+
