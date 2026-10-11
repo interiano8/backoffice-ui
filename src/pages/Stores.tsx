@@ -242,8 +242,8 @@ export const StoresPage: React.FC = () => {
     esControladorGas: false,
     businessType: 'GAS_STATION',
     emisor: '',
-    moneda: 'HNL',
-    codigoMoneda: 'HNL',
+    moneda: 'L',
+    codigoMoneda: 'HN',
     telefono: '',
     correo: '',
     noConsumidorFinal: '',
@@ -481,8 +481,8 @@ export const StoresPage: React.FC = () => {
       claveControlador: '',
       esControladorGas: false,
       emisor: '',
-      moneda: 'HNL',
-      codigoMoneda: 'HNL',
+      moneda: 'L',
+      codigoMoneda: 'HN',
       telefono: '',
       correo: '',
       posConfig: {
@@ -541,8 +541,8 @@ export const StoresPage: React.FC = () => {
       emisor: store.emisor || '',
       telefono: store.telefono || '',
       correo: store.correo || '',
-      moneda: store.moneda || 'HNL',
-      codigoMoneda: store.codigoMoneda || 'HNL',
+      moneda: store.moneda || 'L',
+      codigoMoneda: store.codigoMoneda || 'HN',
       noConsumidorFinal: store.noConsumidorFinal || '',
       validarSaldoCredito: store.validarSaldoCredito ?? true,
       apiUrl: store.apiUrl || 'http://127.0.0.1:5012/api',
@@ -589,8 +589,8 @@ export const StoresPage: React.FC = () => {
         payload.RTN = hq.RTN || payload.RTN;
         payload.emisor = hq.emisor || payload.emisor;
         payload.titulo = hq.titulo || payload.titulo;
-        payload.moneda = hq.moneda || payload.moneda || 'HNL';
-        payload.codigoMoneda = hq.codigoMoneda || payload.codigoMoneda || 'HNL';
+        payload.moneda = hq.moneda || payload.moneda || 'L';
+        payload.codigoMoneda = hq.codigoMoneda || payload.codigoMoneda || 'HN';
         payload.noConsumidorFinal = hq.noConsumidorFinal || payload.noConsumidorFinal || '';
       }
     }
@@ -1184,15 +1184,56 @@ export const StoresPage: React.FC = () => {
                     <p className="text-[11px] text-muted-foreground">Nombre de marca comercial visible.</p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="moneda" className="text-xs font-medium">Moneda Base de Facturación</Label>
-                    <Input
-                      id="moneda"
-                      placeholder="HNL"
-                      value={form.moneda || 'HNL'}
-                      onChange={(e) => setForm({ ...form, moneda: e.target.value, codigoMoneda: e.target.value })}
-                    />
-                    <p className="text-[11px] text-muted-foreground">Moneda oficial del sistema (ej. HNL, USD).</p>
+                  <div className="space-y-2 col-span-1 sm:col-span-2 p-3 bg-muted/20 border border-border/40 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-foreground">Definición de Moneda y Símbolo</Label>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-[11px] px-2"
+                          onClick={() => setForm({ ...form, codigoMoneda: 'HN', moneda: 'L' })}
+                        >
+                          🇭🇳 Honduras (HN · L)
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-[11px] px-2"
+                          onClick={() => setForm({ ...form, codigoMoneda: 'USD', moneda: '$' })}
+                        >
+                          🇺🇸 Dólar (USD · $)
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div className="space-y-1">
+                        <Label htmlFor="codigoMoneda" className="text-xs font-medium">Código País / Moneda (ISO)</Label>
+                        <Input
+                          id="codigoMoneda"
+                          placeholder="HN"
+                          value={form.codigoMoneda || 'HN'}
+                          onChange={(e) => setForm({ ...form, codigoMoneda: e.target.value.trim().toUpperCase() })}
+                          className="font-mono"
+                        />
+                        <p className="text-[10px] text-muted-foreground">Código de país o catálogo (ej. HN o HNL).</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="moneda" className="text-xs font-medium">Símbolo Visual en POS</Label>
+                        <Input
+                          id="moneda"
+                          placeholder="L"
+                          value={form.moneda || 'L'}
+                          onChange={(e) => setForm({ ...form, moneda: e.target.value })}
+                          className="font-mono font-bold"
+                        />
+                        <p className="text-[10px] text-muted-foreground">Símbolo visible en pantalla e impresión (ej. L).</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
