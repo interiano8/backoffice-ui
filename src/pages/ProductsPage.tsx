@@ -11,18 +11,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Package,
+  Plus,
   Search,
   DollarSign,
   Edit,
   Barcode,
-  Layers,
   RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TablePagination } from '@/components/TablePagination';
 import { ProductFormModal } from './ProductFormModal';
 import { ProductPriceModal } from './ProductPriceModal';
-import { CatalogConfigModal } from './CatalogConfigModal';
 
 export const ProductsPage: React.FC = () => {
   const { stores } = useAppStore();
@@ -48,8 +47,6 @@ export const ProductsPage: React.FC = () => {
 
   const [priceModalOpen, setPriceModalOpen] = useState(false);
   const [priceProduct, setPriceProduct] = useState<Product | null>(null);
-
-  const [configModalOpen, setConfigModalOpen] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -86,6 +83,11 @@ export const ProductsPage: React.FC = () => {
     e.preventDefault();
     setPage(1);
     loadData();
+  };
+
+  const handleOpenCreate = () => {
+    setSelectedProduct(null);
+    setProductModalOpen(true);
   };
 
   const handleOpenEdit = (p: Product) => {
@@ -125,12 +127,8 @@ export const ProductsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            onClick={() => setConfigModalOpen(true)}
-            className="gap-2 text-xs"
-          >
-            <Layers className="w-4 h-4" /> Deptos / Categorías / Prov.
+          <Button onClick={handleOpenCreate} className="gap-2 text-xs">
+            <Plus className="w-4 h-4" /> Nuevo Producto
           </Button>
         </div>
       </div>
@@ -216,7 +214,7 @@ export const ProductsPage: React.FC = () => {
               ) : products.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                    No se encontraron productos en el catálogo con los filtros aplicados.
+                    No se encontraron productos en el catálogo. Haz clic en "Nuevo Producto" para registrar el primero.
                   </td>
                 </tr>
               ) : (
@@ -379,15 +377,6 @@ export const ProductsPage: React.FC = () => {
         product={priceProduct}
         stores={stores}
         onSaved={loadData}
-      />
-
-      <CatalogConfigModal
-        isOpen={configModalOpen}
-        onClose={() => setConfigModalOpen(false)}
-        departments={departments}
-        categories={categories}
-        suppliers={suppliers}
-        onRefresh={loadData}
       />
     </div>
   );
