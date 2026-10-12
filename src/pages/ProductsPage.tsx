@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Package,
-  Plus,
   Search,
   DollarSign,
   Edit,
@@ -89,11 +88,6 @@ export const ProductsPage: React.FC = () => {
     loadData();
   };
 
-  const handleOpenCreate = () => {
-    setSelectedProduct(null);
-    setProductModalOpen(true);
-  };
-
   const handleOpenEdit = (p: Product) => {
     setSelectedProduct(p);
     setProductModalOpen(true);
@@ -137,9 +131,6 @@ export const ProductsPage: React.FC = () => {
             className="gap-2 text-xs"
           >
             <Layers className="w-4 h-4" /> Deptos / Categorías / Prov.
-          </Button>
-          <Button onClick={handleOpenCreate} className="gap-2 text-xs">
-            <Plus className="w-4 h-4" /> Nuevo Producto
           </Button>
         </div>
       </div>
@@ -225,7 +216,7 @@ export const ProductsPage: React.FC = () => {
               ) : products.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                    No se encontraron productos en el catálogo. Haz clic en "Nuevo Producto" para registrar el primero.
+                    No se encontraron productos en el catálogo con los filtros aplicados.
                   </td>
                 </tr>
               ) : (
