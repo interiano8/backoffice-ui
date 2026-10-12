@@ -20,6 +20,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { TablePagination } from '@/components/TablePagination';
 import { ProductFormModal } from './ProductFormModal';
 import { ProductPriceModal } from './ProductPriceModal';
 import { CatalogConfigModal } from './CatalogConfigModal';
@@ -31,11 +32,16 @@ export const ProductsPage: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState('');
+
+  // Paginación
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Modales
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -49,7 +55,7 @@ export const ProductsPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [prods, deps, cats, sups] = await Promise.all([
+      const [prods, deps, cats, sups, uoms] = await Promise.all([
         productsService.getProducts({
           search: search || undefined,
           departmentId: selectedDeptFilter || undefined,
@@ -58,11 +64,13 @@ export const ProductsPage: React.FC = () => {
         productsService.getDepartments(),
         productsService.getCategories(),
         productsService.getSuppliers(),
+        productsService.getUnitsOfMeasure(),
       ]);
       setProducts(prods);
       setDepartments(deps);
       setCategories(cats);
       setSuppliers(sups);
+      setUnits(uoms);
     } catch (err: any) {
       toast.error('Error cargando catálogo de productos');
     } finally {
@@ -71,11 +79,13 @@ export const ProductsPage: React.FC = () => {
   };
 
   useEffect(() => {
+    setPage(1);
     loadData();
   }, [selectedDeptFilter, selectedCatFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     loadData();
   };
 
@@ -103,6 +113,8 @@ export const ProductsPage: React.FC = () => {
       toast.error('Error actualizando estado del producto');
     }
   };
+
+  const paginatedProducts = products.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -217,7 +229,7 @@ export const ProductsPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                products.map((p) => {
+                paginatedProducts.map((p) => {
                   const activePrices = p.prices?.filter((pr) => pr.active) || [];
                   return (
                     <tr key={p.id} className="hover:bg-muted/30 transition-colors">
@@ -347,6 +359,14 @@ export const ProductsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        <TablePagination
+          currentPage={page}
+          pageSize={pageSize}
+          totalItems={products.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
 
       {/* Modales */}
@@ -357,6 +377,8 @@ export const ProductsPage: React.FC = () => {
         departments={departments}
         categories={categories}
         suppliers={suppliers}
+        units={units}
+        existingProducts={products}
         onSaved={loadData}
       />
 

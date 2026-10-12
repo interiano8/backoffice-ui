@@ -37,6 +37,15 @@ export interface Supplier {
   _count?: { products: number };
 }
 
+export interface UnitOfMeasure {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ProductBarcode {
   id: string;
   productId: string;
@@ -249,4 +258,26 @@ export const productsService = {
     const res = await api.patch(`/suppliers/${id}/toggle`);
     return res.data;
   },
+
+  // ===== UNIDADES DE MEDIDA =====
+  getUnitsOfMeasure: async (activeOnly = false): Promise<UnitOfMeasure[]> => {
+    const res = await api.get('/units-of-measure', { params: { activeOnly } });
+    return res.data;
+  },
+
+  createUnitOfMeasure: async (data: { code: string; name: string; active?: boolean }): Promise<UnitOfMeasure> => {
+    const res = await api.post('/units-of-measure', data);
+    return res.data;
+  },
+
+  updateUnitOfMeasure: async (id: string, data: { name?: string; active?: boolean }): Promise<UnitOfMeasure> => {
+    const res = await api.patch(`/units-of-measure/${id}`, data);
+    return res.data;
+  },
+
+  toggleUnitOfMeasure: async (id: string): Promise<UnitOfMeasure> => {
+    const res = await api.patch(`/units-of-measure/${id}/toggle`);
+    return res.data;
+  },
 };
+

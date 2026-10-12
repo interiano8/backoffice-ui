@@ -24,6 +24,7 @@ const TransfersPage = lazy(() => import('./pages/TransfersPage').then(m => ({ de
 const InventoryAuditsPage = lazy(() => import('./pages/InventoryAuditsPage').then(m => ({ default: m.InventoryAuditsPage })));
 const PromotionsPage = lazy(() => import('./pages/PromotionsPage').then(m => ({ default: m.PromotionsPage })));
 const ProductsPage = lazy(() => import('./pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
+const CatalogManagementPage = lazy(() => import('./pages/CatalogManagementPage').then(m => ({ default: m.CatalogManagementPage })));
 import { AlertsBell } from './components/AlertsBell';
 import { StationHealthWidget } from './components/StationHealthWidget';
 import { PageLoader } from './components/PageLoader';
@@ -75,6 +76,7 @@ import {
   ClipboardCheck,
   Tag,
   Package,
+  Layers,
 } from 'lucide-react';
 
 
@@ -129,6 +131,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     { path: '/promotions', label: 'Promociones / Combos', icon: Tag },
     { path: '/payment-methods', label: 'Formas de Pago', icon: CreditCard },
     { path: '/productos', label: 'Productos', icon: Package },
+    { path: '/catalog', label: 'Deptos / Categorías / Prov.', icon: Layers },
 
 
     { path: '/tiendas', label: 'Tiendas', icon: Building2 },
@@ -405,6 +408,7 @@ function AnimatedRoutes() {
             <Route path="/promotions" element={<PromotionsPage />} />
             <Route path="/payment-methods" element={<PaymentMethodsPage />} />
             <Route path="/productos" element={<ProductsPage />} />
+            <Route path="/catalog" element={<CatalogManagementPage />} />
 
 
           </Routes>

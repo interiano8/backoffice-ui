@@ -4,6 +4,7 @@ import {
   Department,
   Category,
   Supplier,
+  UnitOfMeasure,
   productsService,
 } from '@/services/products.service';
 import { Button } from '@/components/ui/button';
@@ -15,16 +16,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Barcode, Truck } from 'lucide-react';
+import { Plus, Trash2, Barcode, Truck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  generateSuggestedProductSku,
+  generateInternalEan13,
+} from '@/lib/code-generators';
 
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  product: Product | null; // null si es nuevo
+  product: Product | null;
   departments: Department[];
   categories: Category[];
   suppliers: Supplier[];
+  units?: UnitOfMeasure[];
+  existingProducts?: Product[];
   onSaved: () => void;
 }
 
@@ -35,6 +42,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   departments,
   categories,
   suppliers,
+  units = [],
+  existingProducts = [],
   onSaved,
 }) => {
   const isEditing = Boolean(product);
@@ -80,11 +89,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         })) || [],
       );
     } else {
-      setCode('');
+      const suggested = generateSuggestedProductSku(existingProducts.map((p) => p.code));
+      setCode(suggested);
       setDescription('');
       setDepartmentId('');
       setCategoryId('');
-      setUnitOfMeasure('UND');
+      setUnitOfMeasure(units[0]?.code || 'UND');
       setTaxGroup('15');
       setImageUrl('');
       setActive(true);
@@ -95,6 +105,23 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setNewSupplierId('');
     setNewSupplierProdCode('');
   }, [product, isOpen]);
+
+  const handleGenerateSku = () => {
+    const suggested = generateSuggestedProductSku(existingProducts.map((p) => p.code));
+    setCode(suggested);
+    toast.info(`Código SKU sugerido: ${suggested}`);
+  };
+
+  const handleGenerateBarcode = () => {
+    // Todos los códigos de barra existentes en el sistema + los actuales del formulario
+    const allExisting = [
+      ...existingProducts.flatMap((p) => p.barcodes?.map((b) => b.barcode) || []),
+      ...barcodes,
+    ];
+    const generated = generateInternalEan13(allExisting);
+    setBarcodes([...barcodes, generated]);
+    toast.success(`Código de barras EAN-13 generado: ${generated}`);
+  };
 
   // Filtrar categorías que correspondan al departamento seleccionado (si se seleccionó uno)
   const filteredCategories = departmentId
@@ -215,15 +242,28 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           {/* Ficha General */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border border-border">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Código SKU *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-muted-foreground">Código SKU *</label>
+                {!isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateSku}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                    title="Calcular siguiente código sugerido"
+                  >
+                    <Sparkles className="w-3 h-3" /> Auto-generar
+                  </button>
+                )}
+              </div>
               <Input
-                placeholder="SKU-1001"
+                placeholder="PRD-00001"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 disabled={isEditing}
                 className="font-mono uppercase h-9"
               />
             </div>
+
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground">Descripción / Nombre *</label>
@@ -277,13 +317,24 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 onChange={(e) => setUnitOfMeasure(e.target.value)}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="UND">UND - Unidad</option>
-                <option value="GL">GL - Galón</option>
-                <option value="LT">LT - Litro</option>
-                <option value="CJA">CJA - Caja</option>
-                <option value="PAQ">PAQ - Paquete</option>
+                {units.length > 0 ? (
+                  units.map((u) => (
+                    <option key={u.id} value={u.code}>
+                      {u.code} - {u.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="UND">UND - Unidad</option>
+                    <option value="GL">GL - Galón</option>
+                    <option value="LT">LT - Litro</option>
+                    <option value="CJA">CJA - Caja</option>
+                    <option value="PAQ">PAQ - Paquete</option>
+                  </>
+                )}
               </select>
             </div>
+
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground">Impuesto (ISV)</label>
@@ -327,10 +378,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   }
                 }}
               />
-              <Button type="button" variant="secondary" onClick={handleAddBarcode} className="h-9 gap-1">
+              <Button type="button" variant="secondary" onClick={handleAddBarcode} className="h-9 gap-1 whitespace-nowrap">
                 <Plus className="w-4 h-4" /> Agregar
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGenerateBarcode}
+                className="h-9 gap-1 whitespace-nowrap text-primary border-primary/40 hover:bg-primary/10"
+                title="Generar código de barras EAN-13 interno único"
+              >
+                <Sparkles className="w-4 h-4" /> Generar EAN
+              </Button>
             </div>
+
 
             <div className="flex flex-wrap gap-2 pt-1">
               {barcodes.length === 0 ? (
