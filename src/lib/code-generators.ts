@@ -64,7 +64,7 @@ export function generateSuggestedProductSku(existingCodes: string[]): string {
 }
 
 /**
- * Genera el siguiente código para departamento (ej. DEP-01)
+ * Genera el siguiente código para departamento (ej. DEP-00001)
  */
 export function generateSuggestedDepartmentCode(existingCodes: string[]): string {
   const prefix = 'DEP-';
@@ -76,11 +76,11 @@ export function generateSuggestedDepartmentCode(existingCodes: string[]): string
     .filter((n) => n > 0);
 
   const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : existingCodes.length + 1;
-  return `${prefix}${String(nextNum).padStart(2, '0')}`;
+  return `${prefix}${String(nextNum).padStart(5, '0')}`;
 }
 
 /**
- * Genera el siguiente código para categoría (ej. CAT-01)
+ * Genera el siguiente código para categoría (ej. CAT-00001)
  */
 export function generateSuggestedCategoryCode(existingCodes: string[]): string {
   const prefix = 'CAT-';
@@ -92,11 +92,11 @@ export function generateSuggestedCategoryCode(existingCodes: string[]): string {
     .filter((n) => n > 0);
 
   const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : existingCodes.length + 1;
-  return `${prefix}${String(nextNum).padStart(2, '0')}`;
+  return `${prefix}${String(nextNum).padStart(5, '0')}`;
 }
 
 /**
- * Genera el siguiente código para proveedor (ej. PRV-001)
+ * Genera el siguiente código para proveedor (ej. PRV-00001)
  */
 export function generateSuggestedSupplierCode(existingCodes: string[]): string {
   const prefix = 'PRV-';
@@ -108,5 +108,5 @@ export function generateSuggestedSupplierCode(existingCodes: string[]): string {
     .filter((n) => n > 0);
 
   const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : existingCodes.length + 1;
-  return `${prefix}${String(nextNum).padStart(3, '0')}`;
+  return `${prefix}${String(nextNum).padStart(5, '0')}`;
 }

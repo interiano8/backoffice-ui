@@ -114,7 +114,7 @@ export const productsService = {
   },
 
   createProduct: async (data: {
-    code: string;
+    code?: string;
     description: string;
     departmentId?: string;
     categoryId?: string;
@@ -184,7 +184,7 @@ export const productsService = {
     return res.data;
   },
 
-  createDepartment: async (data: { code: string; name: string; active?: boolean }): Promise<Department> => {
+  createDepartment: async (data: { code?: string; name: string; active?: boolean }): Promise<Department> => {
     const res = await api.post('/departments', data);
     return res.data;
   },
@@ -208,7 +208,7 @@ export const productsService = {
   },
 
   createCategory: async (data: {
-    code: string;
+    code?: string;
     name: string;
     departmentId?: string;
     active?: boolean;
@@ -237,7 +237,7 @@ export const productsService = {
   },
 
   createSupplier: async (data: {
-    code: string;
+    code?: string;
     name: string;
     taxId?: string;
     phone?: string;

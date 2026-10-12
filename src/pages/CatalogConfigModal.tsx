@@ -54,14 +54,19 @@ export const CatalogConfigModal: React.FC<CatalogConfigModalProps> = ({
 
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!depCode.trim() || !depName.trim()) {
-      toast.error('Código y nombre de departamento requeridos');
+    if (!depName.trim()) {
+      toast.error('El nombre de departamento es requerido');
       return;
     }
     setLoading(true);
     try {
-      await productsService.createDepartment({ code: depCode, name: depName });
-      toast.success('Departamento creado');
+      const created = await productsService.createDepartment({
+        code: depCode.trim() ? depCode.trim().toUpperCase() : undefined,
+        name: depName.trim(),
+      });
+      toast.success(`Departamento creado exitosamente con el código: ${created.code}`, {
+        duration: 7000,
+      });
       setDepCode('');
       setDepName('');
       onRefresh();
@@ -74,18 +79,20 @@ export const CatalogConfigModal: React.FC<CatalogConfigModalProps> = ({
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catCode.trim() || !catName.trim()) {
-      toast.error('Código y nombre de categoría requeridos');
+    if (!catName.trim()) {
+      toast.error('El nombre de categoría es requerido');
       return;
     }
     setLoading(true);
     try {
-      await productsService.createCategory({
-        code: catCode,
-        name: catName,
+      const created = await productsService.createCategory({
+        code: catCode.trim() ? catCode.trim().toUpperCase() : undefined,
+        name: catName.trim(),
         departmentId: catDepartmentId || undefined,
       });
-      toast.success('Categoría creada');
+      toast.success(`Categoría creada exitosamente con el código: ${created.code}`, {
+        duration: 7000,
+      });
       setCatCode('');
       setCatName('');
       setCatDepartmentId('');
@@ -99,20 +106,22 @@ export const CatalogConfigModal: React.FC<CatalogConfigModalProps> = ({
 
   const handleCreateSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supCode.trim() || !supName.trim()) {
-      toast.error('Código y nombre de proveedor requeridos');
+    if (!supName.trim()) {
+      toast.error('El nombre de proveedor es requerido');
       return;
     }
     setLoading(true);
     try {
-      await productsService.createSupplier({
-        code: supCode,
-        name: supName,
+      const created = await productsService.createSupplier({
+        code: supCode.trim() ? supCode.trim().toUpperCase() : undefined,
+        name: supName.trim(),
         taxId: supTaxId || undefined,
         phone: supPhone || undefined,
         email: supEmail || undefined,
       });
-      toast.success('Proveedor creado');
+      toast.success(`Proveedor creado exitosamente con el código: ${created.code}`, {
+        duration: 7000,
+      });
       setSupCode('');
       setSupName('');
       setSupTaxId('');
@@ -198,12 +207,12 @@ export const CatalogConfigModal: React.FC<CatalogConfigModalProps> = ({
           <div className="space-y-4">
             <form onSubmit={handleCreateDepartment} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end bg-muted/40 p-3 rounded-lg border border-border">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Código</label>
+                <label className="text-xs font-medium text-muted-foreground">Código (Auto o manual)</label>
                 <Input
-                  placeholder="DEP01"
+                  placeholder="Auto (DEP-00001)"
                   value={depCode}
                   onChange={(e) => setDepCode(e.target.value.toUpperCase())}
-                  className="h-9 uppercase"
+                  className="h-9 uppercase font-mono"
                 />
               </div>
               <div>
@@ -271,12 +280,12 @@ export const CatalogConfigModal: React.FC<CatalogConfigModalProps> = ({
           <div className="space-y-4">
             <form onSubmit={handleCreateCategory} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-muted/40 p-3 rounded-lg border border-border">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Código</label>
+                <label className="text-xs font-medium text-muted-foreground">Código (Auto o manual)</label>
                 <Input
-                  placeholder="CAT01"
+                  placeholder="Auto (CAT-00001)"
                   value={catCode}
                   onChange={(e) => setCatCode(e.target.value.toUpperCase())}
-                  className="h-9 uppercase"
+                  className="h-9 uppercase font-mono"
                 />
               </div>
               <div>
@@ -363,12 +372,12 @@ export const CatalogConfigModal: React.FC<CatalogConfigModalProps> = ({
           <div className="space-y-4">
             <form onSubmit={handleCreateSupplier} className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-muted/40 p-3 rounded-lg border border-border">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Código *</label>
+                <label className="text-xs font-medium text-muted-foreground">Código (Auto o manual)</label>
                 <Input
-                  placeholder="PROV01"
+                  placeholder="Auto (PRV-00001)"
                   value={supCode}
                   onChange={(e) => setSupCode(e.target.value.toUpperCase())}
-                  className="h-9 uppercase"
+                  className="h-9 uppercase font-mono"
                 />
               </div>
               <div>

@@ -89,8 +89,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         })) || [],
       );
     } else {
-      const suggested = generateSuggestedProductSku(existingProducts.map((p) => p.code));
-      setCode(suggested);
+      setCode('');
       setDescription('');
       setDepartmentId('');
       setCategoryId('');
@@ -185,8 +184,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || !description.trim()) {
-      toast.error('Código y descripción son obligatorios');
+    if (!description.trim()) {
+      toast.error('La descripción del producto es obligatoria');
+      return;
+    }
+    if (isEditing && !code.trim()) {
+      toast.error('El código SKU es obligatorio');
       return;
     }
 
@@ -204,10 +207,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           barcodes,
           suppliers: selectedSuppliers,
         });
-        toast.success('Producto actualizado exitosamente');
+        toast.success(`Producto ${product.code} actualizado exitosamente`);
       } else {
-        await productsService.createProduct({
-          code: code.trim().toUpperCase(),
+        const created = await productsService.createProduct({
+          code: code.trim() ? code.trim().toUpperCase() : undefined,
           description: description.trim(),
           departmentId: departmentId || undefined,
           categoryId: categoryId || undefined,
@@ -218,7 +221,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           barcodes,
           suppliers: selectedSuppliers,
         });
-        toast.success('Producto creado exitosamente');
+        toast.success(`Producto creado exitosamente con el código SKU: ${created.code}`, {
+          duration: 7000,
+        });
       }
       onSaved();
       onClose();
@@ -243,25 +248,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border border-border">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-muted-foreground">Código SKU *</label>
+                <label className="text-xs font-semibold text-muted-foreground">
+                  Código SKU {!isEditing && <span className="font-normal text-muted-foreground">(Opcional / Manual)</span>}
+                </label>
                 {!isEditing && (
                   <button
                     type="button"
                     onClick={handleGenerateSku}
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
-                    title="Calcular siguiente código sugerido"
+                    title="Previsualizar siguiente código correlativo de 5 dígitos"
                   >
-                    <Sparkles className="w-3 h-3" /> Auto-generar
+                    <Sparkles className="w-3 h-3" /> Sugerir código
                   </button>
                 )}
               </div>
               <Input
-                placeholder="PRD-00001"
+                placeholder={isEditing ? '' : 'Automático (5 dígitos al guardar) o escribe un SKU manual'}
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 disabled={isEditing}
                 className="font-mono uppercase h-9"
               />
+              {!isEditing && !code && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  ✨ Se asignará un correlativo único de 5 dígitos al guardar para evitar conflictos.
+                </p>
+              )}
             </div>
 
 

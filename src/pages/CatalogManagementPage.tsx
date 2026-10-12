@@ -73,10 +73,7 @@ export const CatalogManagementPage: React.FC = () => {
       setSuppliers(sups);
       setUnits(uoms);
 
-      // Sugerir códigos automáticamente si están vacíos
-      setDepCode((prev) => prev || generateSuggestedDepartmentCode(deps.map((d) => d.code)));
-      setCatCode((prev) => prev || generateSuggestedCategoryCode(cats.map((c) => c.code)));
-      setSupCode((prev) => prev || generateSuggestedSupplierCode(sups.map((s) => s.code)));
+      // No pre-asignar códigos en el formulario antes de guardar para evitar conflictos concurrentes
     } catch (err: any) {
       toast.error('Error cargando catálogos');
     } finally {
@@ -100,14 +97,19 @@ export const CatalogManagementPage: React.FC = () => {
   // --- Handlers Creación ---
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!depCode.trim() || !depName.trim()) {
-      toast.error('Código y nombre de departamento requeridos');
+    if (!depName.trim()) {
+      toast.error('El nombre de departamento es requerido');
       return;
     }
     setSubmitting(true);
     try {
-      await productsService.createDepartment({ code: depCode, name: depName });
-      toast.success('Departamento creado exitosamente');
+      const created = await productsService.createDepartment({
+        code: depCode.trim() ? depCode.trim().toUpperCase() : undefined,
+        name: depName.trim(),
+      });
+      toast.success(`Departamento creado exitosamente con el código: ${created.code}`, {
+        duration: 7000,
+      });
       setDepCode('');
       setDepName('');
       loadAll();
@@ -120,18 +122,20 @@ export const CatalogManagementPage: React.FC = () => {
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catCode.trim() || !catName.trim()) {
-      toast.error('Código y nombre de categoría requeridos');
+    if (!catName.trim()) {
+      toast.error('El nombre de categoría es requerido');
       return;
     }
     setSubmitting(true);
     try {
-      await productsService.createCategory({
-        code: catCode,
-        name: catName,
+      const created = await productsService.createCategory({
+        code: catCode.trim() ? catCode.trim().toUpperCase() : undefined,
+        name: catName.trim(),
         departmentId: catDepartmentId || undefined,
       });
-      toast.success('Categoría creada exitosamente');
+      toast.success(`Categoría creada exitosamente con el código: ${created.code}`, {
+        duration: 7000,
+      });
       setCatCode('');
       setCatName('');
       setCatDepartmentId('');
@@ -145,21 +149,23 @@ export const CatalogManagementPage: React.FC = () => {
 
   const handleCreateSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supCode.trim() || !supName.trim()) {
-      toast.error('Código y nombre de proveedor requeridos');
+    if (!supName.trim()) {
+      toast.error('El nombre de proveedor es requerido');
       return;
     }
     setSubmitting(true);
     try {
-      await productsService.createSupplier({
-        code: supCode,
-        name: supName,
+      const created = await productsService.createSupplier({
+        code: supCode.trim() ? supCode.trim().toUpperCase() : undefined,
+        name: supName.trim(),
         taxId: supTaxId || undefined,
         phone: supPhone || undefined,
         email: supEmail || undefined,
         address: supAddress || undefined,
       });
-      toast.success('Proveedor creado exitosamente');
+      toast.success(`Proveedor creado exitosamente con el código: ${created.code}`, {
+        duration: 7000,
+      });
       setSupCode('');
       setSupName('');
       setSupTaxId('');
@@ -344,21 +350,29 @@ export const CatalogManagementPage: React.FC = () => {
             <form onSubmit={handleCreateDepartment} className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Código *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Código <span className="font-normal text-muted-foreground">(Opcional / Manual)</span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => setDepCode(generateSuggestedDepartmentCode(departments.map((d) => d.code)))}
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                    title="Previsualizar siguiente código correlativo de 5 dígitos"
                   >
-                    <Sparkles className="w-3 h-3" /> Auto
+                    <Sparkles className="w-3 h-3" /> Sugerir código
                   </button>
                 </div>
                 <Input
-                  placeholder="DEP-01"
+                  placeholder="Automático (ej. DEP-00001) o código manual"
                   value={depCode}
                   onChange={(e) => setDepCode(e.target.value.toUpperCase())}
                   className="font-mono uppercase h-9"
                 />
+                {!depCode && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    ✨ Se asignará correlativo de 5 dígitos (DEP-00001) automáticamente al guardar.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Nombre *</label>
@@ -449,21 +463,29 @@ export const CatalogManagementPage: React.FC = () => {
             <form onSubmit={handleCreateCategory} className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Código *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Código <span className="font-normal text-muted-foreground">(Opcional / Manual)</span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => setCatCode(generateSuggestedCategoryCode(categories.map((c) => c.code)))}
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                    title="Previsualizar siguiente código correlativo de 5 dígitos"
                   >
-                    <Sparkles className="w-3 h-3" /> Auto
+                    <Sparkles className="w-3 h-3" /> Sugerir código
                   </button>
                 </div>
                 <Input
-                  placeholder="CAT-01"
+                  placeholder="Automático (ej. CAT-00001) o código manual"
                   value={catCode}
                   onChange={(e) => setCatCode(e.target.value.toUpperCase())}
                   className="font-mono uppercase h-9"
                 />
+                {!catCode && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    ✨ Se asignará correlativo de 5 dígitos (CAT-00001) automáticamente al guardar.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Nombre *</label>
@@ -569,21 +591,29 @@ export const CatalogManagementPage: React.FC = () => {
             <form onSubmit={handleCreateSupplier} className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Código *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Código <span className="font-normal text-muted-foreground">(Opcional / Manual)</span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => setSupCode(generateSuggestedSupplierCode(suppliers.map((s) => s.code)))}
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                    title="Previsualizar siguiente código correlativo de 5 dígitos"
                   >
-                    <Sparkles className="w-3 h-3" /> Auto
+                    <Sparkles className="w-3 h-3" /> Sugerir código
                   </button>
                 </div>
                 <Input
-                  placeholder="PRV-001"
+                  placeholder="Automático (ej. PRV-00001) o código manual"
                   value={supCode}
                   onChange={(e) => setSupCode(e.target.value.toUpperCase())}
                   className="font-mono uppercase h-9"
                 />
+                {!supCode && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    ✨ Se asignará correlativo de 5 dígitos (PRV-00001) automáticamente al guardar.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Nombre / Razón Social *</label>
